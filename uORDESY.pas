@@ -5,7 +5,8 @@ unit uORDESY;
 interface
 
 uses
-  Generics.Collections, SysUtils, Forms, Windows, uLog, uExplode;
+  uLog, uExplode, uConnection,
+  Generics.Collections, SysUtils, Forms, Windows;
 
 type
   TOraItemType = (OraProcedure, OraFunction, OraPackage);
@@ -20,10 +21,10 @@ type
     Класс элемента группы }
   TGroupItem = class
   private
-    FId: integer;
-    FName: string;
-    FParentId: integer;
-    FExpanded: boolean;
+    FId: integer;        //Идентивикатор
+    FName: string;       //Отображаемое имя в списке
+    FParentId: integer;  //Идентификатор родителя
+    FExpanded: boolean;  //Признак развертнутости
   public
     constructor Create(const aName: string; const aId, aParentId: integer;
       aExpanded: boolean = true);
@@ -39,12 +40,13 @@ type
     Класс объекта списка групп }
   TGroupList = class(TObjectList<TGroupItem>)
   private
-    FAutoSave: boolean;
-    FFileName: string;
+    FAutoSave: boolean;                                //Признак автосохранения
+    FFileName: string;                                 //Имя файла со структурой
     FLoaded: boolean;
     function GetUnusedgId: integer;
     function GroupExists(const aId: integer): boolean;
     function HasChild(const aId: integer): boolean;
+    function GetMaxGroupId: integer;
   public
     constructor Create(const aFileName: string = '');
     destructor Destroy; override;
@@ -53,7 +55,6 @@ type
     function AddGroup(const aName: string; const aParentId: integer = 0)
       : integer;
     function GetGroupIndex(const aId: integer): integer;
-    function GetMaxGroupId: integer;
     procedure SaveGroups(const aFileName: string = 'group_list.data');
     procedure LoadGroups(const aFileName: string = 'group_list.data');
     procedure DeleteGroup(const aId: integer);
@@ -63,47 +64,62 @@ type
     property MaxGroupId: integer read GetMaxGroupId;
   end;
 
-  TDBItem = class
+  TOraItem = class
   private
     FId : integer;
-    FName: string;
+    FGroupId: integer;
+    FSchemeId: integer;
     FType: TOraItemType;
     FBody: WideString;
-    FScheme: string;
   public
-    constructor Create(const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aScheme: string = 'RISKO');
+    constructor Create(const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aSchemeId: integer = 0);
     property Id: integer read FId write FId;
-    property ItemName: string read FName write FName;
     property ItemType: TOraItemType read FType write FType;
     property ItemBody: widestring read FBody write FBody;
-    property Scheme: string read FScheme write FScheme;
+    property Scheme: integer read FSchemeId write FSchemeId;
+  end;
+
+  TOraScheme = class
+  private
+    FId: integer;
+    FGroupId: integer;         //Идентификатор списка (тут будет и название)
+    FLogin: string;
+    FBase: string;
+    FConnection: TConnection;
+  public
+    //constructor Create(const aLogin, aPass: string);
+  end;
+
+  TORDESYModule = class
+  private
+    FId: integer;
+    FGroupId: integer;
   end;
 
   TORDESYProject = class
   private
     FSchemesOrder: array of TOrderType;
-    FItems: array of TDBItem;
+    FItems: array of TOraItem;
   public
     constructor Create(const aName: string);
-    procedure AddItem(aItem: TDBItem);
+    procedure AddItem(aItem: TOraItem);
   end;
 
 implementation
 
 { TDBItem }
 
-constructor TDBItem.Create(const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aScheme: string = 'RISKO');
+constructor TOraItem.Create(const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aSchemeId: integer = 0);
 begin
   inherited Create;
-  FName:= aName;
   FType:= aType;
   FBody:= aBody;
-  FScheme:= aScheme;
+  FSchemeId:= aSchemeId;
 end;
 
 { TORDESYProject }
 
-procedure TORDESYProject.AddItem(aItem: TDBItem);
+procedure TORDESYProject.AddItem(aItem: TOraItem);
 begin
 
 end;
@@ -316,7 +332,7 @@ begin
     except
       on E: Exception do
       begin
-        Self.Clear;
+        Clear;
         FLoaded := false;
         {$IFDEF ERROR_LOGONLY}
           AddToLog(E.Message);
@@ -356,7 +372,7 @@ begin
     end;
   finally
     SetLength(gArrLine, 0);
-    if Self.Count <> 0 then
+    if Count <> 0 then
       FLoaded := true;
     CloseFile(gFile);
   end;
@@ -392,10 +408,10 @@ begin
       end;
     end;
     try
-      for i := 0 to Self.Count - 1 do
+      for i := 0 to Count - 1 do
       begin
         gLine := inttostr(Items[i].FId) + gSep + Items[i].FName + gSep +
-          inttostr(Items[i].FParentId) + gSep + booltostr (Self.Items[i].FExpanded);
+          inttostr(Items[i].FParentId) + gSep + booltostr (Items[i].FExpanded);
         Writeln(gFile, gLine);
         Inc(numLine);
       end;

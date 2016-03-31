@@ -4,7 +4,8 @@ uses
   Forms,
   uMain in 'uMain.pas' {fmMain},
   uORDESY in 'uORDESY.pas',
-  uLog in 'uLog.pas';
+  uLog in 'uLog.pas',
+  uExplode in 'uExplode.pas';
 
 {$R *.res}
 

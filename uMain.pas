@@ -1,24 +1,21 @@
-{$DEFINE LOG}
+{$DEFINE ERROR_ALL}
 unit uMain;
 
 interface
 
 uses
+  uORDESY, uLog, uExplode,
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Menus, StdCtrls, uORDESY, ExtCtrls, ComCtrls, ToolWin, uLog;
+  Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, ToolWin, ImgList;
 
 type
   TfmMain = class(TForm)
-    TreeView1: TTreeView;
-    ToolBar1: TToolBar;
+    tvMain: TTreeView;
     mmMain: TMainMenu;
     miFile: TMenuItem;
     miExit: TMenuItem;
-    ToolButton1: TToolButton;
-    ComboBox1: TComboBox;
     pnlMain: TPanel;
-    ToolButton2: TToolButton;
-    ToolButton3: TToolButton;
+    imlMain: TImageList;
     procedure miExitClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
   private
@@ -59,11 +56,7 @@ end;
 // Инициализация интерфейса ползователя
 procedure TfmMain.PrepareGUI;
 begin
-  {$IFDEF Debug}
-  showmessage('LOG defined');
-  {$ELSE}
-  showmessage('LOG are not defined');
-  {$ENDIF}
+
 end;
 
 end.

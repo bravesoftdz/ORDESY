@@ -43,6 +43,7 @@
 			</DCCReference>
 			<DCCReference Include="uORDESY.pas"/>
 			<DCCReference Include="uLog.pas"/>
+			<DCCReference Include="uExplode.pas"/>
 			<BuildConfiguration Include="Base">
 				<Key>Base</Key>
 			</BuildConfiguration>
