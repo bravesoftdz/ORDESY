@@ -104,6 +104,17 @@ object fmMain: TfmMain
       ExplicitTop = 272
       ExplicitWidth = 185
       ExplicitHeight = 41
+      object BitBtn1: TBitBtn
+        Left = 6
+        Top = 528
+        Width = 75
+        Height = 25
+        Caption = 'BitBtn1'
+        DoubleBuffered = True
+        ParentDoubleBuffered = False
+        TabOrder = 0
+        OnClick = BitBtn1Click
+      end
     end
   end
   object mmMain: TMainMenu

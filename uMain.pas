@@ -1,3 +1,17 @@
+{
+
+edt - TEdit
+btn - TButton
+pnl - TPanel
+lbl - TLabel
+gpb - TGroupBox
+spl - TSplitter
+tv - TTreeView
+mm - TMainMenu
+mi - TMenuItem
+fm - TForm
+
+}
 unit uMain;
 
 interface
@@ -6,9 +20,9 @@ uses
   {$IFDEF Debug}
   uLog,
   {$ENDIF}
-  uORDESY, uExplode, uShellFuncs,
+  uORDESY, uExplode, uShellFuncs, uProjectCreate,
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, ToolWin, ImgList;
+  Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, ToolWin, ImgList, Buttons;
 
 type
   TfmMain = class(TForm)
@@ -39,9 +53,11 @@ type
     miAbout: TMenuItem;
     miHelp: TMenuItem;
     splMain: TSplitter;
+    BitBtn1: TBitBtn;
     procedure miExitClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
+    procedure BitBtn1Click(Sender: TObject);
   private
     procedure PrepareGUI;
   public
@@ -55,6 +71,11 @@ var
 implementation
 
 {$R *.dfm}
+
+procedure TfmMain.BitBtn1Click(Sender: TObject);
+begin
+  ShowProjectCreateDialog();
+end;
 
 procedure TfmMain.FormCreate(Sender: TObject);
 begin
