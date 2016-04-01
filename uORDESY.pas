@@ -171,10 +171,10 @@ begin
     on E: Exception do
     begin
       {$IFDEF Debug}
-        AddToLog(E.Message);
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      AddToLog(E.Message);
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ELSE}
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
     end;
   end;
@@ -234,10 +234,10 @@ begin
     on E: Exception do
     begin
       {$IFDEF Debug}
-        AddToLog(E.Message);
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      AddToLog(E.Message);
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ELSE}
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
     end;
   end;
@@ -332,10 +332,10 @@ begin
         Clear;
         FLoaded := false;
         {$IFDEF Debug}
-          AddToLog(E.Message);
-          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        AddToLog(E.Message);
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
-          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
       end;
     end;
@@ -356,10 +356,10 @@ begin
         Self.Clear;
         FLoaded := false;
         {$IFDEF Debug}
-          AddToLog(E.Message);
-          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        AddToLog(E.Message);
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
-          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
       end;
     end;
@@ -391,10 +391,10 @@ begin
       on E: Exception do
       begin
         {$IFDEF Debug}
-          AddToLog(E.Message);
-          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        AddToLog(E.Message);
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
-          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
       end;
     end;
@@ -410,10 +410,10 @@ begin
       on E: Exception do
       begin
         {$IFDEF Debug}
-          AddToLog(E.Message);
-          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        AddToLog(E.Message);
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
-          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
       end;
     end;

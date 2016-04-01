@@ -28,6 +28,13 @@ object fmMain: TfmMain
     TabOrder = 0
     ExplicitTop = 25
     ExplicitHeight = 619
+    object splMain: TSplitter
+      Left = 281
+      Top = 41
+      Height = 567
+      Color = clWhite
+      ParentColor = False
+    end
     object tvMain: TTreeView
       Left = 0
       Top = 41
@@ -87,9 +94,9 @@ object fmMain: TfmMain
       end
     end
     object pnlClient: TPanel
-      Left = 281
+      Left = 284
       Top = 41
-      Width = 541
+      Width = 538
       Height = 567
       Align = alClient
       TabOrder = 3

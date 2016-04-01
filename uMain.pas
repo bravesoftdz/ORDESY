@@ -4,7 +4,7 @@ interface
 
 uses
   {$IFDEF Debug}
-    uLog,
+  uLog,
   {$ENDIF}
   uORDESY, uExplode, uShellFuncs,
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
@@ -38,14 +38,14 @@ type
     miLast: TMenuItem;
     miAbout: TMenuItem;
     miHelp: TMenuItem;
+    splMain: TSplitter;
     procedure miExitClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
   private
-    { Private declarations }
+    procedure PrepareGUI;
   public
     procedure InitApp;
-    procedure PrepareGUI;
     procedure FreeApp;
   end;
 
@@ -73,7 +73,7 @@ end;
 
 procedure TfmMain.miExitClick(Sender: TObject);
 begin
-  fmMain.FreeApp;
+  FreeApp;
 end;
 
 // Инициализация интерфейса ползователя
@@ -118,15 +118,15 @@ begin
           begin
             Node.ImageIndex:= 9;
           end;
-      end;
-    if TObject(Node.Data) is TOraScheme then
-      Node.ImageIndex:= 52;
-    if TObject(Node.Data) is TORDESYModule then
+      end
+    else if TObject(Node.Data) is TOraScheme then
+      Node.ImageIndex:= 52
+    else if TObject(Node.Data) is TORDESYModule then
       if Node.HasChildren and Node.Expanded then
         Node.ImageIndex:= 55
       else
-        Node.ImageIndex:= 54;
-    if TObject(Node.Data) is TORDESYProject then
+        Node.ImageIndex:= 54
+    else if TObject(Node.Data) is TORDESYProject then
       if Node.HasChildren and Node.Expanded then
         Node.ImageIndex:= 59
       else
@@ -135,10 +135,10 @@ begin
     on E: Exception do
     begin
       {$IFDEF Debug}
-        AddToLog(E.Message);
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      AddToLog(E.Message);
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ELSE}
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
     end;
   end;

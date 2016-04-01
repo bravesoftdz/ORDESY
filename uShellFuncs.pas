@@ -22,6 +22,7 @@ begin
   Result:= path;
 end;
 
+//Имя текущего пользоателя
 function GetWindowsUser: string;
 var
   UserName : string;
