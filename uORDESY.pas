@@ -17,6 +17,10 @@ type
     Order: integer;
   end;
 
+  { Forward declarations }
+
+  //TOraScheme = class;
+
   { TGroupItem
 
     Класс элемента группы }
@@ -24,6 +28,7 @@ type
   private
     FId: integer;        //Идентивикатор
     FName: string;       //Отображаемое имя в списке
+    FDescription: string;
     FParentId: integer;  //Идентификатор родителя
     FExpanded: boolean;  //Признак развертнутости
   public
@@ -32,6 +37,7 @@ type
     destructor Destroy; override;                     //Обязательно перегрузить виртуальный метод
     property Id: integer read FId;
     property Name: string read FName write FName;
+    property Description: string read FDescription write FDescription;
     property ParentId: integer read FParentId write FParentId;
     property Expanded: boolean read FExpanded write FExpanded;
   end;
@@ -80,15 +86,25 @@ type
     property Scheme: integer read FSchemeId write FSchemeId;
   end;
 
+  TOraBase = class
+  private
+    FId: integer;
+    FName: string;
+  public
+    constructor Create(const aId: integer; const aName: string);
+  end;
+
   TOraScheme = class
   private
     FId: integer;
     FGroupId: integer;         //Идентификатор списка (тут будет и название)
+    FBase: TOraBase;
     FLogin: string;
-    FBase: string;
-    FConnection: TConnection;
+    FPass: string;
+    FConnection: integer;
   public
-    //constructor Create(const aLogin, aPass: string);
+    constructor Create(const aId: integer; const aLogin, aPass: string;  var aBase: TOraBase);
+    property Id: integer read FId;
   end;
 
   TORDESYModule = class
@@ -99,6 +115,8 @@ type
 
   TORDESYProject = class
   private
+    FId: integer;
+    FGroupId: integer;
     FSchemes: array of TOrderType;
     FItems: array of TOraItem;
   public
@@ -172,7 +190,7 @@ begin
     begin
       {$IFDEF Debug}
       AddToLog(E.Message);
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      MessageBox(Application.Handle, PChar(ClassName + ' | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ELSE}
       MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
@@ -235,7 +253,7 @@ begin
     begin
       {$IFDEF Debug}
       AddToLog(E.Message);
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      MessageBox(Application.Handle, PChar(ClassName + ' | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ELSE}
       MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
@@ -333,7 +351,7 @@ begin
         FLoaded := false;
         {$IFDEF Debug}
         AddToLog(E.Message);
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        MessageBox(Application.Handle, PChar(ClassName + ' | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
         MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
@@ -357,7 +375,7 @@ begin
         FLoaded := false;
         {$IFDEF Debug}
         AddToLog(E.Message);
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        MessageBox(Application.Handle, PChar(ClassName + ' | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
         MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
@@ -392,7 +410,7 @@ begin
       begin
         {$IFDEF Debug}
         AddToLog(E.Message);
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        MessageBox(Application.Handle, PChar(ClassName + ' | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
         MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
@@ -411,7 +429,7 @@ begin
       begin
         {$IFDEF Debug}
         AddToLog(E.Message);
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        MessageBox(Application.Handle, PChar(ClassName + ' | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
         MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
@@ -420,6 +438,27 @@ begin
   finally
     CloseFile(gFile);
   end;
+end;
+
+{ TOraScheme }
+
+constructor TOraScheme.Create(const aId: integer; const aLogin,
+  aPass: string; var aBase: TOraBase);
+begin
+  inherited Create;
+  FId:= aId;
+  FBase:= aBase;
+  FLogin:= aLogin;
+  FPass:= aPass;
+end;
+
+{ TOraBase }
+
+constructor TOraBase.Create(const aId: integer; const aName: string);
+begin
+  inherited Create;
+  FId:= aId;
+  FName:= aName;
 end;
 
 end.

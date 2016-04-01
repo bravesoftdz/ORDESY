@@ -1,0 +1,9 @@
+01.04.2016 16:23:38: TfmMain | Access violation at address 004CD6EB in module 'ORDESY.exe'. Write of address 00000010
+01.04.2016 16:24:16: TfmMain | Access violation at address 004CD6EB in module 'ORDESY.exe'. Write of address 00000010
+01.04.2016 16:25:09: TfmMain | PrepareOptions | Access violation at address 004CD6EB in module 'ORDESY.exe'. Write of address 00000010
+01.04.2016 16:29:58: TfmMain | PrepareOptions | Access violation at address 004D8747 in module 'ORDESY.exe'. Write of address 00000010
+01.04.2016 16:30:19: TfmMain | PrepareOptions | Access violation at address 004D8747 in module 'ORDESY.exe'. Write of address 00000010
+01.04.2016 16:30:41: TfmMain | PrepareOptions | Access violation at address 004D8747 in module 'ORDESY.exe'. Write of address 00000010
+01.04.2016 16:31:59: TfmMain | PrepareOptions | Access violation at address 004D8747 in module 'ORDESY.exe'. Write of address 00000010
+01.04.2016 16:46:02: TfmMain | PrepareOptions | Access violation at address 004D8747 in module 'ORDESY.exe'. Write of address 00000010
+01.04.2016 16:46:39: TfmMain | PrepareOptions | Access violation at address 004CD6EB in module 'ORDESY.exe'. Write of address 00000010

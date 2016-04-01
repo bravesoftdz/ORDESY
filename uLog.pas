@@ -20,8 +20,7 @@ begin
     Append(f)
   else
     Rewrite(f);
-  //Writeln(f,DateTimeToStr(Now));
-  Writeln(f, s);
+  Writeln(f, DateTimeToStr(Now) + ': ' + s);
   Flush(f);
   Closefile(f);
 end;

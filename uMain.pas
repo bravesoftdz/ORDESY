@@ -20,7 +20,7 @@ uses
   {$IFDEF Debug}
   uLog,
   {$ENDIF}
-  uORDESY, uExplode, uShellFuncs, uProjectCreate,
+  uORDESY, uExplode, uShellFuncs, uProjectCreate, uOptions,
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, ToolWin, ImgList, Buttons;
 
@@ -59,10 +59,13 @@ type
     procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
     procedure BitBtn1Click(Sender: TObject);
   private
+    AppOptions: TOptions;
     procedure PrepareGUI;
   public
     procedure InitApp;
     procedure FreeApp;
+  published
+    procedure PrepareOptions;
   end;
 
 var
@@ -74,7 +77,7 @@ implementation
 
 procedure TfmMain.BitBtn1Click(Sender: TObject);
 begin
-  ShowProjectCreateDialog();
+  ShowProjectCreateDialog('');
 end;
 
 procedure TfmMain.FormCreate(Sender: TObject);
@@ -89,6 +92,7 @@ end;
 
 procedure TfmMain.InitApp;
 begin
+  PrepareOptions;
   PrepareGUI;
 end;
 
@@ -97,28 +101,31 @@ begin
   FreeApp;
 end;
 
-// Инициализация интерфейса ползователя
-{procedure TfmMain.PrepareGUI;
-var
-  OrProject: TORDESYProject;
-  OrScheme: TOraScheme;
-  OrModule: TORDESYModule;
-  LastAdded: TTreeNode;
-begin
-  OrProject:= TORDESYProject.Create('project1');
-  OrScheme:= TOraScheme.Create;
-  OrModule:= TORDESYModule.Create;
-  LastAdded:= tvMain.Items.AddObject(nil, 'project1', OrProject);
-  LastAdded:= tvMain.Items.AddChildObject(LastAdded, 'scheme', OrScheme);
-  LastAdded:= tvMain.Items.AddChildObject(LastAdded, 'module', OrModule);
-  tvMain.Items.AddChildObject(LastAdded, 'scribe', TOraItem.Create('scribe'));
-  tvMain.Items.AddChildObject(LastAdded, 'scribe2', TOraItem.Create('scribe', '', OraFunction));
-  tvMain.Items.AddChildObject(LastAdded, 'scribe3', TOraItem.Create('scribe', '', OraPackage));
-end;}
-
 procedure TfmMain.PrepareGUI;
 begin
-  edtUserName.Text:= GetWindowsUser; //Узнаем текущее имя пользователя
+  edtUserName.Text:= AppOptions.UserName;
+end;
+
+procedure TfmMain.PrepareOptions;
+begin
+  try
+    if not Assigned(AppOptions) then
+      AppOptions:= AppOptions.Create;
+    AppOptions.AppTitle:= Application.Title;
+    AppOptions.UserName:= GetWindowsUser; //Узнаем текущее имя пользователя
+    {if not AppOptions.LoadUserOptions() then
+      raise Exception.Create('Cant''t load user options!');}
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | PrepareOptions | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | PrepareOptions | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
 end;
 
 procedure TfmMain.tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
@@ -156,8 +163,8 @@ begin
     on E: Exception do
     begin
       {$IFDEF Debug}
-      AddToLog(E.Message);
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      AddToLog(ClassName + ' | tvMainGetImageIndex | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | tvMainGetImageIndex | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ELSE}
       MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}

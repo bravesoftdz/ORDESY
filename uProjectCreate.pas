@@ -20,20 +20,20 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
   end;
 
-function ShowProjectCreateDialog(): boolean;
+function ShowProjectCreateDialog(const aCreator: string): boolean;
 
 implementation
 
 {$R *.dfm}
 
-function ShowProjectCreateDialog(): boolean;
+function ShowProjectCreateDialog(const aCreator: string): boolean;
 begin
   with TfmProjectCreate.Create(Application) do
     try
       Result:= false;
-      if ModalResult = mrOk then
+      lblCreator.Caption:= aCreator;
+      if ShowModal = mrOk then
       begin
-        ShowMessage('All ok!');
         Result:= true;
       end;
     finally

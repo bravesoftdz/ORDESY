@@ -7,7 +7,8 @@ uses
   uLog in 'uLog.pas',
   uExplode in 'uExplode.pas',
   uShellFuncs in 'uShellFuncs.pas',
-  uProjectCreate in 'uProjectCreate.pas' {fmProjectCreate};
+  uProjectCreate in 'uProjectCreate.pas' {fmProjectCreate},
+  uOptions in 'uOptions.pas';
 
 {$R *.res}
 
