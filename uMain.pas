@@ -58,10 +58,21 @@ end;
 
 // Инициализация интерфейса ползователя
 procedure TfmMain.PrepareGUI;
+var
+  OrProject: TORDESYProject;
+  OrScheme: TOraScheme;
+  OrModule: TORDESYModule;
+  LastAdded: TTreeNode;
 begin
-  tvMain.Items.AddObject(nil, 'scribe', TOraItem.Create('scribe'));
-  tvMain.Items.AddObject(nil, 'scribe2', TOraItem.Create('scribe', '', OraFunction));
-  tvMain.Items.AddObject(nil, 'scribe3', TOraItem.Create('scribe', '', OraPackage));
+  OrProject:= TORDESYProject.Create('project1');
+  OrScheme:= TOraScheme.Create;
+  OrModule:= TORDESYModule.Create;
+  LastAdded:= tvMain.Items.AddObject(nil, 'project1', OrProject);
+  LastAdded:= tvMain.Items.AddChildObject(LastAdded, 'scheme', OrScheme);
+  LastAdded:= tvMain.Items.AddChildObject(LastAdded, 'module', OrModule);
+  tvMain.Items.AddChildObject(LastAdded, 'scribe', TOraItem.Create('scribe'));
+  tvMain.Items.AddChildObject(LastAdded, 'scribe2', TOraItem.Create('scribe', '', OraFunction));
+  tvMain.Items.AddChildObject(LastAdded, 'scribe3', TOraItem.Create('scribe', '', OraPackage));
 end;
 
 procedure TfmMain.tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
@@ -82,6 +93,18 @@ begin
           Node.ImageIndex:= 9;
         end;
     end;
+  if TObject(Node.Data) is TOraScheme then
+    Node.ImageIndex:= 52;
+  if TObject(Node.Data) is TORDESYModule then
+    if Node.HasChildren and Node.Expanded then
+      Node.ImageIndex:= 55
+    else
+      Node.ImageIndex:= 54;
+  if TObject(Node.Data) is TORDESYProject then
+    if Node.HasChildren and Node.Expanded then
+      Node.ImageIndex:= 59
+    else
+      Node.ImageIndex:= 58;
 end;
 
 end.
