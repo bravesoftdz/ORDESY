@@ -5,7 +5,8 @@ uses
   uMain in 'uMain.pas' {fmMain},
   uORDESY in 'uORDESY.pas',
   uLog in 'uLog.pas',
-  uExplode in 'uExplode.pas';
+  uExplode in 'uExplode.pas',
+  uShellFuncs in 'uShellFuncs.pas';
 
 {$R *.res}
 

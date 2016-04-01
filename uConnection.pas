@@ -2,7 +2,8 @@ unit uConnection;
 
 interface
 
-uses SysUtils, ADODB, Classes, Dialogs, Windows;
+uses
+  SysUtils, ADODB, Classes, Dialogs, Windows;
 
 const
   connstrORA =

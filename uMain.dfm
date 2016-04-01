@@ -28,14 +28,16 @@ object fmMain: TfmMain
     ExplicitTop = 25
     ExplicitHeight = 619
     object tvMain: TTreeView
-      Left = 39
-      Top = 97
+      Left = 31
+      Top = 73
       Width = 281
       Height = 400
       Align = alCustom
       Images = imlMain
       Indent = 19
       TabOrder = 0
+      OnGetImageIndex = tvMainGetImageIndex
+      OnGetSelectedIndex = tvMainGetImageIndex
     end
   end
   object mmMain: TMainMenu

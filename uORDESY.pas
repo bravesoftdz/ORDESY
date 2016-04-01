@@ -1,11 +1,12 @@
-//{$DEFINE ERROR_LOGONLY}
-{$DEFINE ERROR_ALL}
 unit uORDESY;
 
 interface
 
 uses
-  uLog, uExplode, uConnection,
+  {$IFDEF Debug}
+  uLog,
+  {$ENDIF}
+  uExplode, uConnection, uShellFuncs,
   Generics.Collections, SysUtils, Forms, Windows;
 
 type
@@ -28,7 +29,7 @@ type
   public
     constructor Create(const aName: string; const aId, aParentId: integer;
       aExpanded: boolean = true);
-    destructor Destroy; override;
+    destructor Destroy; override;                     //Обязательно перегрузить виртуальный метод
     property Id: integer read FId;
     property Name: string read FName write FName;
     property ParentId: integer read FParentId write FParentId;
@@ -52,12 +53,11 @@ type
     destructor Destroy; override;
     procedure Add(aItem: TGroupItem);
     procedure Delete(const Value: integer);
-    function AddGroup(const aName: string; const aParentId: integer = 0)
-      : integer;
-    function GetGroupIndex(const aId: integer): integer;
-    procedure SaveGroups(const aFileName: string = 'group_list.data');
-    procedure LoadGroups(const aFileName: string = 'group_list.data');
+    function AddGroup(const aName: string; const aParentId: integer = 0): integer;
     procedure DeleteGroup(const aId: integer);
+    function GetGroupIndex(const aId: integer): integer;
+    procedure SaveGroups(const aFileName: string = 'group_list.data'); //Сохранение списка
+    procedure LoadGroups(const aFileName: string = 'group_list.data'); //Загрузка списка
     property AutoSave: boolean read FAutoSave write FAutoSave;
     property FileName: string read FFileName write FFileName;
     property Loaded: boolean read FLoaded;
@@ -71,6 +71,7 @@ type
     FSchemeId: integer;
     FType: TOraItemType;
     FBody: WideString;
+    FLastChange: TDatetime;
   public
     constructor Create(const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aSchemeId: integer = 0);
     property Id: integer read FId write FId;
@@ -98,7 +99,7 @@ type
 
   TORDESYProject = class
   private
-    FSchemesOrder: array of TOrderType;
+    FSchemes: array of TOrderType;
     FItems: array of TOraItem;
   public
     constructor Create(const aName: string);
@@ -169,13 +170,11 @@ begin
   except
     on E: Exception do
     begin
-      {$IFDEF ERROR_LOGONLY}
+      {$IFDEF Debug}
         AddToLog(E.Message);
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ELSE}
-        {$IFDEF ERROR_ALL}
-          AddToLog(E.Message);
-          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-        {$ENDIF}
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
     end;
   end;
@@ -234,13 +233,11 @@ begin
   except
     on E: Exception do
     begin
-      {$IFDEF ERROR_LOGONLY}
+      {$IFDEF Debug}
         AddToLog(E.Message);
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ELSE}
-        {$IFDEF ERROR_ALL}
-          AddToLog(E.Message);
-          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-        {$ENDIF}
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
     end;
   end;
@@ -334,13 +331,11 @@ begin
       begin
         Clear;
         FLoaded := false;
-        {$IFDEF ERROR_LOGONLY}
+        {$IFDEF Debug}
           AddToLog(E.Message);
+          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
-          {$IFDEF ERROR_ALL}
-            AddToLog(E.Message);
-            MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-          {$ENDIF}
+          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
       end;
     end;
@@ -360,13 +355,11 @@ begin
       begin
         Self.Clear;
         FLoaded := false;
-        {$IFDEF ERROR_LOGONLY}
+        {$IFDEF Debug}
           AddToLog(E.Message);
+          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
-          {$IFDEF ERROR_ALL}
-            AddToLog(E.Message);
-            MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-          {$ENDIF}
+          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
       end;
     end;
@@ -397,13 +390,11 @@ begin
     except
       on E: Exception do
       begin
-        {$IFDEF ERROR_LOGONLY}
+        {$IFDEF Debug}
           AddToLog(E.Message);
+          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
-          {$IFDEF ERROR_ALL}
-            AddToLog(E.Message);
-            MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-          {$ENDIF}
+          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
       end;
     end;
@@ -418,13 +409,11 @@ begin
     except
       on E: Exception do
       begin
-        {$IFDEF ERROR_LOGONLY}
+        {$IFDEF Debug}
           AddToLog(E.Message);
+          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ELSE}
-          {$IFDEF ERROR_ALL}
-            AddToLog(E.Message);
-            MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-          {$ENDIF}
+          MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
         {$ENDIF}
       end;
     end;
