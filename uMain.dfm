@@ -5,13 +5,14 @@ object fmMain: TfmMain
   ClientHeight = 644
   ClientWidth = 822
   Color = clBtnFace
-  Font.Charset = DEFAULT_CHARSET
+  Font.Charset = RUSSIAN_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
-  Font.Name = 'Tahoma'
+  Font.Name = 'Consolas'
   Font.Style = []
   Menu = mmMain
   OldCreateOrder = False
+  Position = poDesktopCenter
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
@@ -28,16 +29,74 @@ object fmMain: TfmMain
     ExplicitTop = 25
     ExplicitHeight = 619
     object tvMain: TTreeView
-      Left = 31
-      Top = 73
+      Left = 0
+      Top = 41
       Width = 281
-      Height = 400
-      Align = alCustom
+      Height = 567
+      Align = alLeft
       Images = imlMain
       Indent = 19
       TabOrder = 0
       OnGetImageIndex = tvMainGetImageIndex
       OnGetSelectedIndex = tvMainGetImageIndex
+      ExplicitLeft = 39
+      ExplicitTop = 89
+      ExplicitHeight = 400
+    end
+    object pnlTop: TPanel
+      Left = 0
+      Top = 0
+      Width = 822
+      Height = 41
+      Align = alTop
+      TabOrder = 1
+    end
+    object pnlBottom: TPanel
+      Left = 0
+      Top = 608
+      Width = 822
+      Height = 36
+      Align = alBottom
+      TabOrder = 2
+      object lblUserName: TLabel
+        Left = 7
+        Top = 9
+        Width = 63
+        Height = 15
+        Caption = 'UserName:'
+        Font.Charset = RUSSIAN_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Consolas'
+        Font.Style = []
+        ParentFont = False
+      end
+      object edtUserName: TEdit
+        Left = 72
+        Top = 6
+        Width = 105
+        Height = 23
+        Font.Charset = RUSSIAN_CHARSET
+        Font.Color = clWindowText
+        Font.Height = -13
+        Font.Name = 'Consolas'
+        Font.Style = []
+        ParentFont = False
+        ReadOnly = True
+        TabOrder = 0
+      end
+    end
+    object pnlClient: TPanel
+      Left = 281
+      Top = 41
+      Width = 541
+      Height = 567
+      Align = alClient
+      TabOrder = 3
+      ExplicitLeft = 384
+      ExplicitTop = 272
+      ExplicitWidth = 185
+      ExplicitHeight = 41
     end
   end
   object mmMain: TMainMenu
@@ -45,9 +104,55 @@ object fmMain: TfmMain
     Top = 40
     object miFile: TMenuItem
       Caption = 'File'
+      object miOptions: TMenuItem
+        Caption = 'Options'
+      end
       object miExit: TMenuItem
         Caption = 'Exit'
         OnClick = miExitClick
+      end
+    end
+    object miProject: TMenuItem
+      Caption = 'Project'
+      object miCreateProject: TMenuItem
+        Caption = 'Create project'
+      end
+      object miProjectOptions: TMenuItem
+        Caption = 'Project options'
+      end
+      object miShow: TMenuItem
+        Caption = 'Show'
+        object miShowAll: TMenuItem
+          Caption = 'All'
+          Checked = True
+        end
+      end
+    end
+    object miScheme: TMenuItem
+      Caption = 'Scheme'
+      object miCreateScheme: TMenuItem
+        Caption = 'Create scheme'
+      end
+      object miSchemeOptions: TMenuItem
+        Caption = 'Scheme options'
+      end
+    end
+    object miObject: TMenuItem
+      Caption = 'Object'
+      object miCreateObject: TMenuItem
+        Caption = 'Create object'
+      end
+      object miObjectOptions: TMenuItem
+        Caption = 'Object options'
+      end
+    end
+    object miLast: TMenuItem
+      Caption = '?'
+      object miHelp: TMenuItem
+        Caption = 'Help'
+      end
+      object miAbout: TMenuItem
+        Caption = 'About'
       end
     end
   end
