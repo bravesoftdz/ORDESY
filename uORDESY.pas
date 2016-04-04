@@ -7,7 +7,7 @@ uses
   uLog,
   {$ENDIF}
   uExplode, uConnection, uShellFuncs,
-  Generics.Collections, SysUtils, Forms, Windows;
+  Generics.Collections, SysUtils, Forms, Windows, IniFiles;
 
 type
   TOraItemType = (OraProcedure, OraFunction, OraPackage);
@@ -19,7 +19,11 @@ type
 
   { Forward declarations }
 
-  //TOraScheme = class;
+  TOraItem = class;
+  TOraScheme = class;
+  TOraBase = class;
+  TORDESYModule = class;
+  TORDESYProject = class;
 
   { TGroupItem
 
@@ -76,14 +80,18 @@ type
     FGroupId: integer;
     FSchemeId: integer;
     FType: TOraItemType;
+    FName: string;
     FBody: WideString;
     FLastChange: TDatetime;
   public
-    constructor Create(const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aSchemeId: integer = 0);
+    constructor Create(const aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aGroupId: integer = 0);
+    function Wrap(var aProject: TORDESYProject):boolean;
+    function Deploy(var aProject: TORDESYProject): boolean;
     property Id: integer read FId write FId;
     property ItemType: TOraItemType read FType write FType;
     property ItemBody: widestring read FBody write FBody;
-    property Scheme: integer read FSchemeId write FSchemeId;
+    property SchemeId: integer read FSchemeId write FSchemeId;
+    property GroupId: integer read FGroupId write FGroupId;
   end;
 
   TOraBase = class
@@ -92,60 +100,197 @@ type
     FName: string;
   public
     constructor Create(const aId: integer; const aName: string);
+    property Id: integer read FId;
+    property Name: string read FName write FName;
   end;
 
   TOraScheme = class
   private
     FId: integer;
     FGroupId: integer;         //Идентификатор списка (тут будет и название)
-    FBase: TOraBase;
+    FBaseId: integer;
     FLogin: string;
     FPass: string;
-    FConnection: integer;
+    FConnection: TConnection;
+    FConnected: boolean;
+    FValid: boolean;
   public
-    constructor Create(const aId: integer; const aLogin, aPass: string;  var aBase: TOraBase);
+    constructor Create(const aId: integer; const aLogin, aPass: string; const aBaseId: integer; const aGroupId: integer = 0);
+    procedure Connect(var aProject: TORDESYProject);
+    procedure Disconnect;
     property Id: integer read FId;
+    property GroupId: integer read FGroupId write FGroupId;
+    property Connected: boolean read FConnected;
+    property Valid: boolean read FValid;
   end;
 
   TORDESYModule = class
   private
     FId: integer;
+    FName: string;
+    FDescription: WideString;
     FGroupId: integer;
+  public
+    constructor Create(const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = ''; const aGroupId: integer = 0);
+    property Id: integer read FId;
+    property Name: string read FName write FName;
+    property Description: widestring read FDescription write FDescription;
+    property GroupId: integer read FGroupId write FGroupId;
   end;
 
   TORDESYProject = class
   private
     FId: integer;
+    FName: string;
     FGroupId: integer;
-    FSchemes: array of TOrderType;
-    FItems: array of TOraItem;
+    FOraItems: array of TOraItem;
+    FOraBases: array of TOraBase;
+    FOraSchemes: array of TOraScheme;
+    FORDESYModules: array of TORDESYModule;
   public
-    constructor Create(const aName: string);
-    procedure AddItem(aItem: TOraItem);
+    constructor Create(const aName: string = 'New Project');
+
+    procedure AddOraItem(var aItem: TOraItem);
+    procedure GetOraItem(const aIndex: integer; var aItem: TOraItem);
+
+    procedure AddOraBase(var aBase: TOraBase);
+    procedure GetOraBase(const aIndex: integer; out aBase: TOraBase);
+    function GetOraBaseName(const aIndex: integer): string;
+
+    procedure AddOraScheme(var aScheme: TOraScheme);
+    procedure GetOraScheme(const aIndex: integer; var aScheme: TOraScheme);
+
+    property Id: integer read FId write FId;
+    property Name: string read FName write FName;
+    property GroupId: integer read FGroupId write FGroupId;
+  end;
+
+  TORDESYProjectList = class
+  private
+    FProjects: array of TORDESYProject;
+    function GetProjectsCount: integer;
+  public
+    constructor Create;
+    function LoadFromFile(const aFileName: string = 'ORDESY.data'): boolean;
+    function SaveToFile(const aFileName: string = 'ORDESY.data'): boolean;
+    property Count: integer read GetProjectsCount;
   end;
 
 implementation
 
 { TDBItem }
 
-constructor TOraItem.Create(const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aSchemeId: integer = 0);
+constructor TOraItem.Create(const aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aGroupId: integer = 0);
 begin
   inherited Create;
   FType:= aType;
+  FName:= aName;
   FBody:= aBody;
   FSchemeId:= aSchemeId;
+  FGroupId:= aGroupId;
 end;
 
 { TORDESYProject }
 
-procedure TORDESYProject.AddItem(aItem: TOraItem);
+procedure TORDESYProject.AddOraBase(var aBase: TOraBase);
+var
+  i: integer;
 begin
-
+  for i := 0 to high(FOraBases) do
+  begin
+    if FOraBases[i].Id = aBase.Id then
+      Exit;
+  end;
+  SetLength(FOraBases, length(FOraBases) + 1);
+  FOraBases[high(FOraBases)]:= aBase;
 end;
 
-constructor TORDESYProject.Create(const aName: string);
+procedure TORDESYProject.AddOraItem(var aItem: TOraItem);
+var
+  i: integer;
+begin
+  for i := 0 to high(FOraItems) do
+  begin
+    if FOraItems[i].Id = aItem.Id then
+      Exit;
+  end;
+  SetLength(FOraItems, length(FOraItems) + 1);
+  FOraItems[high(FOraItems)]:= aItem;
+end;
+
+procedure TORDESYProject.AddOraScheme(var aScheme: TOraScheme);
+var
+  i: integer;
+begin
+  for i := 0 to high(FOraSchemes) do
+  begin
+    if FOraSchemes[i].Id = aScheme.Id then
+      Exit;
+  end;
+  SetLength(FOraSchemes, length(FOraSchemes) + 1);
+  FOraSchemes[high(FOraSchemes)]:= aScheme;
+end;
+
+constructor TORDESYProject.Create(const aName: string = 'New Project');
 begin
   inherited Create;
+  FName:= aName;
+end;
+
+procedure TORDESYProject.GetOraBase(const aIndex: integer; out aBase: TOraBase);
+var
+  i: integer;
+begin
+  for i := 0 to high(FOraBases) do
+  begin
+    if FOraBases[i].FId = aIndex then
+    begin
+      aBase:= FOraBases[i];
+      Exit;
+    end;
+  end;
+  aBase:= nil;
+end;
+
+function TORDESYProject.GetOraBaseName(const aIndex: integer): string;
+var
+  i: integer;
+begin
+  Result:= 'NULL';
+  for i := 0 to high(FOraBases) do
+    if FOraBases[i].FId = aIndex then
+      Result:= FOraBases[i].Name;
+end;
+
+procedure TORDESYProject.GetOraItem(const aIndex: integer; var aItem: TOraItem);
+var
+  i: integer;
+begin
+  for i := 0 to high(FOraItems) do
+  begin
+    if FOraItems[i].FId = aIndex then
+    begin
+      aItem:= FOraItems[i];
+      Exit;
+    end;
+  end;
+  aItem:= nil;
+end;
+
+procedure TORDESYProject.GetOraScheme(const aIndex: integer;
+  var aScheme: TOraScheme);
+var
+  i: integer;
+begin
+  for i := 0 to high(FOraSchemes) do
+  begin
+    if FOraSchemes[i].FId = aIndex then
+    begin
+      aScheme:= FOraSchemes[i];
+      Exit;
+    end;
+  end;
+  aScheme:= nil;
 end;
 
 { TGroupItem }
@@ -442,14 +587,47 @@ end;
 
 { TOraScheme }
 
-constructor TOraScheme.Create(const aId: integer; const aLogin,
-  aPass: string; var aBase: TOraBase);
+procedure TOraScheme.Connect(var aProject: TORDESYProject);
+begin
+  try
+    if not FConnected then
+    begin
+      if not Assigned(FConnection) then
+        FConnection:= TConnection.Create(aProject.GetOraBaseName(FBaseId), FLogin, FPass, connstrORA);
+      FConnection.Connect;
+      FConnected:= FConnection.Connected;
+      FValid:= true;
+    end;
+  except
+    on E: Exception do
+      begin
+        FValid:= false;
+        FConnected:= false;
+        {$IFDEF Debug}
+        AddToLog(E.Message);
+        MessageBox(Application.Handle, PChar(ClassName + ' | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+        {$ELSE}
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        {$ENDIF}
+      end;
+  end;
+end;
+
+constructor TOraScheme.Create(const aId: integer; const aLogin, aPass: string; const aBaseId: integer; const aGroupId: integer = 0);
 begin
   inherited Create;
   FId:= aId;
-  FBase:= aBase;
   FLogin:= aLogin;
   FPass:= aPass;
+  FBaseId:= aBaseId;
+  FGroupId:= aGroupId;
+end;
+
+procedure TOraScheme.Disconnect;
+begin
+  if Assigned(FConnection) and (FConnected) then
+    FConnection.Disconnect;
+  FConnected:= FConnection.Connected;
 end;
 
 { TOraBase }
@@ -459,6 +637,86 @@ begin
   inherited Create;
   FId:= aId;
   FName:= aName;
+end;
+
+function TOraItem.Deploy(var aProject: TORDESYProject): boolean;
+begin
+
+end;
+
+function TOraItem.Wrap(var aProject: TORDESYProject): boolean;
+begin
+
+end;
+
+{ TORDESYProjectList }
+
+constructor TORDESYProjectList.Create;
+begin
+
+end;
+
+function TORDESYProjectList.GetProjectsCount: integer;
+begin
+  Result:= Length(FProjects);
+end;
+
+function TORDESYProjectList.LoadFromFile(const aFileName: string): boolean;
+begin
+  Result:= false;
+  try
+
+  except
+    on E: Exception do
+      begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | LoadFromFile | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | LoadFromFile | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
+end;
+
+function TORDESYProjectList.SaveToFile(const aFileName: string): boolean;
+var
+  iniFile: TIniFile;
+  i: integer;
+begin
+  Result:= false;
+  try
+    try
+      iniFile:= TIniFile.Create(ExtractFilePath(ParamStr(0)) + aFileName);
+      for i := 0 to high(FProjects) do
+      begin
+        iniFile.WriteString('Project', FProjects[i].Name, inttostr(FProjects[i].FId));
+      end;
+    finally
+      iniFile.Free;
+    end;
+  except
+    on E: Exception do
+      begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | SaveToFile | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | SaveToFile | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
+end;
+
+{ TORDESYModule }
+
+constructor TORDESYModule.Create(const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = ''; const aGroupId: integer = 0);
+begin
+  inherited Create;
+  FId:= aId;
+  FName:= aName;
+  FDescription:= aDescription;
+  FGroupId:= aGroupId;
 end;
 
 end.

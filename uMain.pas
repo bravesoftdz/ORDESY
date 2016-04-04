@@ -60,14 +60,14 @@ type
     procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
     procedure splMainMoved(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
+    procedure WMWindowPosChanged(var aMessage: TWMWindowPosChanged); message WM_WINDOWPOSCHANGED;
   private
     AppOptions: TOptions;
     procedure PrepareGUI;
+    procedure PrepareOptions;
   public
     procedure InitApp;
     procedure FreeApp;
-  published
-    procedure PrepareOptions;
   end;
 
 var
@@ -95,6 +95,9 @@ end;
 procedure TfmMain.FreeApp;
 begin
   try
+    AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
+    AppOptions.SetOption('GUI', 'FormLeft', inttostr(fmMain.Left));
+    AppOptions.SetOption('GUI', 'FormTop', inttostr(fmMain.Top));
     if not AppOptions.SaveUserOptions() then
       raise Exception.Create('Cant''t save user options!');
   except
@@ -127,6 +130,8 @@ begin
   try
     edtUserName.Text:= AppOptions.UserName;
     tvMain.Width:= strtoint(AppOptions.GetOption('GUI', 'GroupList'));
+    fmMain.Width:= strtoint(AppOptions.GetOption('GUI', 'FormWidth'));
+    fmMain.Height:= strtoint(AppOptions.GetOption('GUI', 'FormHeight'));
   except
     on E: Exception do
     begin
@@ -208,6 +213,16 @@ begin
       MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
     end;
+  end;
+end;
+
+procedure TfmMain.WMWindowPosChanged(var aMessage: TWMWindowPosChanged);
+begin
+  inherited;
+  if Assigned(AppOptions) then
+  begin
+    AppOptions.SetOption('GUI', 'FormWidth', inttostr(fmMain.Width));
+    AppOptions.SetOption('GUI', 'FormHeight', inttostr(fmMain.Height));
   end;
 end;
 
