@@ -13,6 +13,7 @@ object fmMain: TfmMain
   Menu = mmMain
   OldCreateOrder = False
   Position = poDesktopCenter
+  OnClose = FormClose
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 13
@@ -26,14 +27,13 @@ object fmMain: TfmMain
     DoubleBuffered = False
     ParentDoubleBuffered = False
     TabOrder = 0
-    ExplicitTop = 25
-    ExplicitHeight = 619
     object splMain: TSplitter
       Left = 281
       Top = 41
       Height = 567
       Color = clWhite
       ParentColor = False
+      OnMoved = splMainMoved
     end
     object tvMain: TTreeView
       Left = 0
@@ -46,9 +46,6 @@ object fmMain: TfmMain
       TabOrder = 0
       OnGetImageIndex = tvMainGetImageIndex
       OnGetSelectedIndex = tvMainGetImageIndex
-      ExplicitLeft = 39
-      ExplicitTop = 89
-      ExplicitHeight = 400
     end
     object pnlTop: TPanel
       Left = 0
@@ -100,10 +97,6 @@ object fmMain: TfmMain
       Height = 567
       Align = alClient
       TabOrder = 3
-      ExplicitLeft = 384
-      ExplicitTop = 272
-      ExplicitWidth = 185
-      ExplicitHeight = 41
       object BitBtn1: TBitBtn
         Left = 6
         Top = 528

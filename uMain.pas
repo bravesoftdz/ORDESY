@@ -56,8 +56,10 @@ type
     BitBtn1: TBitBtn;
     procedure miExitClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
     procedure BitBtn1Click(Sender: TObject);
+    procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
+    procedure splMainMoved(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action: TCloseAction);
   private
     AppOptions: TOptions;
     procedure PrepareGUI;
@@ -77,7 +79,12 @@ implementation
 
 procedure TfmMain.BitBtn1Click(Sender: TObject);
 begin
-  ShowProjectCreateDialog('');
+  ShowProjectCreateDialog(AppOptions.UserName);
+end;
+
+procedure TfmMain.FormClose(Sender: TObject; var Action: TCloseAction);
+begin
+  FreeApp;
 end;
 
 procedure TfmMain.FormCreate(Sender: TObject);
@@ -87,6 +94,20 @@ end;
 
 procedure TfmMain.FreeApp;
 begin
+  try
+    if not AppOptions.SaveUserOptions() then
+      raise Exception.Create('Cant''t save user options!');
+  except
+  on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | FreeApp | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | FreeApp | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
   Application.Terminate;
 end;
 
@@ -98,23 +119,36 @@ end;
 
 procedure TfmMain.miExitClick(Sender: TObject);
 begin
-  FreeApp;
+  fmMain.Close;
 end;
 
 procedure TfmMain.PrepareGUI;
 begin
-  edtUserName.Text:= AppOptions.UserName;
+  try
+    edtUserName.Text:= AppOptions.UserName;
+    tvMain.Width:= strtoint(AppOptions.GetOption('GUI', 'GroupList'));
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | PrepareGUI | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | PrepareGUI | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
 end;
 
 procedure TfmMain.PrepareOptions;
 begin
   try
     if not Assigned(AppOptions) then
-      AppOptions:= AppOptions.Create;
+      AppOptions:= TOptions.Create;
     AppOptions.AppTitle:= Application.Title;
     AppOptions.UserName:= GetWindowsUser; //Узнаем текущее имя пользователя
-    {if not AppOptions.LoadUserOptions() then
-      raise Exception.Create('Cant''t load user options!');}
+    if not AppOptions.LoadUserOptions() then
+      raise Exception.Create('Cant''t load user options!');
   except
     on E: Exception do
     begin
@@ -126,6 +160,11 @@ begin
       {$ENDIF}
     end;
   end;
+end;
+
+procedure TfmMain.splMainMoved(Sender: TObject);
+begin
+  AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
 end;
 
 procedure TfmMain.tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
