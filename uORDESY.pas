@@ -87,7 +87,8 @@ type
     constructor Create(const aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aGroupId: integer = 0);
     function Wrap(var aProject: TORDESYProject):boolean;
     function Deploy(var aProject: TORDESYProject): boolean;
-    property Id: integer read FId write FId;
+    property Id: integer read FId;
+    property Name: string read FName write FName;
     property ItemType: TOraItemType read FType write FType;
     property ItemBody: widestring read FBody write FBody;
     property SchemeId: integer read FSchemeId write FSchemeId;
@@ -119,6 +120,8 @@ type
     procedure Connect(var aProject: TORDESYProject);
     procedure Disconnect;
     property Id: integer read FId;
+    property Login: string read FLogin write FLogin;
+    property Pass: string read FPass write FPass;
     property GroupId: integer read FGroupId write FGroupId;
     property Connected: boolean read FConnected;
     property Valid: boolean read FValid;
@@ -152,13 +155,15 @@ type
 
     procedure AddOraItem(var aItem: TOraItem);
     procedure GetOraItem(const aIndex: integer; var aItem: TOraItem);
+    function GetOraItemName(const aIndex: integer): string;
 
     procedure AddOraBase(var aBase: TOraBase);
-    procedure GetOraBase(const aIndex: integer; out aBase: TOraBase);
+    procedure GetOraBase(const aIndex: integer; var aBase: TOraBase);
     function GetOraBaseName(const aIndex: integer): string;
 
     procedure AddOraScheme(var aScheme: TOraScheme);
     procedure GetOraScheme(const aIndex: integer; var aScheme: TOraScheme);
+    function GetOraSchemeLogin(const aIndex: integer): string;
 
     property Id: integer read FId write FId;
     property Name: string read FName write FName;
@@ -237,7 +242,7 @@ begin
   FName:= aName;
 end;
 
-procedure TORDESYProject.GetOraBase(const aIndex: integer; out aBase: TOraBase);
+procedure TORDESYProject.GetOraBase(const aIndex: integer; var aBase: TOraBase);
 var
   i: integer;
 begin
@@ -277,6 +282,16 @@ begin
   aItem:= nil;
 end;
 
+function TORDESYProject.GetOraItemName(const aIndex: integer): string;
+var
+  i: integer;
+begin
+  Result:= 'NULL';
+  for i := 0 to high(FOraItems) do
+    if FOraItems[i].FId = aIndex then
+      Result:= FOraItems[i].Name;
+end;
+
 procedure TORDESYProject.GetOraScheme(const aIndex: integer;
   var aScheme: TOraScheme);
 var
@@ -291,6 +306,16 @@ begin
     end;
   end;
   aScheme:= nil;
+end;
+
+function TORDESYProject.GetOraSchemeLogin(const aIndex: integer): string;
+var
+  i: integer;
+begin
+  Result:= 'NULL';
+  for i := 0 to high(FOraSchemes) do
+    if FOraSchemes[i].FId = aIndex then
+      Result:= FOraSchemes[i].Login;
 end;
 
 { TGroupItem }
@@ -682,7 +707,7 @@ end;
 function TORDESYProjectList.SaveToFile(const aFileName: string): boolean;
 var
   iniFile: TIniFile;
-  i: integer;
+  i, n: integer;
 begin
   Result:= false;
   try
@@ -691,6 +716,10 @@ begin
       for i := 0 to high(FProjects) do
       begin
         iniFile.WriteString('Project', FProjects[i].Name, inttostr(FProjects[i].FId));
+        for n := 0 to high(FProjects[i].FOraBases) do
+        begin
+          iniFile.WriteString(FProjects[i].Name + '_Bases', FProjects[i].FOraBases[n].Name, inttostr(FProjects[i].FOraBases[n].Id));
+        end;
       end;
     finally
       iniFile.Free;
