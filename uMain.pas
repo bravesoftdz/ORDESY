@@ -68,6 +68,7 @@ type
     procedure PrepareGUI;
     procedure PrepareOptions;
     procedure PrepareProjects;
+    procedure UpdateGroups;
   public
     procedure InitApp;
     procedure FreeApp;
@@ -126,6 +127,7 @@ procedure TfmMain.miCreateProjectClick(Sender: TObject);
 begin
   if ShowProjectCreateDialog(AppOptions.UserName, ProjectList) then
   begin
+    UpdateGroups;
     //ShowMessage(inttostr(ProjectList.Count));
   end;
 end;
@@ -249,6 +251,18 @@ begin
       MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
     end;
+  end;
+end;
+
+procedure TfmMain.UpdateGroups;
+var
+  i: integer;
+begin
+  if ProjectList.Count <= 0 then
+    Exit;
+  for i := 0 to ProjectList.Count - 1 do
+  begin
+
   end;
 end;
 

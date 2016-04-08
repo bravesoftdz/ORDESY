@@ -28,8 +28,6 @@ implementation
 {$R *.dfm}
 
 function ShowProjectCreateDialog(const aCreator: string; var aProjectList: TORDESYProjectList): boolean;
-var
-  iProject: TORDESYProject;
 begin
   with TfmProjectCreate.Create(Application) do
     try
@@ -41,8 +39,7 @@ begin
           raise Exception.Create('Incorrect project name, empty or more than 255 characters!');
         if (length(mmDescription.Text) > 1000) then
           raise Exception.Create('Incorrect project description, more than 1000 characters!');
-        iProject:= TORDESYProject.Create(aProjectList.GetFreeProjectId, edtProjectName.Text, mmDescription.Text, lblCreator.Caption);
-        aProjectList.AddProject(iProject);
+        aProjectList.AddProject(TORDESYProject.Create(aProjectList.GetFreeProjectId, edtProjectName.Text, mmDescription.Text, lblCreator.Caption));
         Result:= true;
       end;
     finally
