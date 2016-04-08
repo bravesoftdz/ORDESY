@@ -106,7 +106,6 @@ object fmMain: TfmMain
         DoubleBuffered = True
         ParentDoubleBuffered = False
         TabOrder = 0
-        OnClick = BitBtn1Click
       end
     end
   end
@@ -127,6 +126,7 @@ object fmMain: TfmMain
       Caption = 'Project'
       object miCreateProject: TMenuItem
         Caption = 'Create project'
+        OnClick = miCreateProjectClick
       end
       object miProjectOptions: TMenuItem
         Caption = 'Project options'

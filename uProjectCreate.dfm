@@ -25,10 +25,6 @@ object fmProjectCreate: TfmProjectCreate
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitLeft = 80
-    ExplicitTop = 104
-    ExplicitWidth = 185
-    ExplicitHeight = 41
     DesignSize = (
       422
       283)
@@ -53,7 +49,6 @@ object fmProjectCreate: TfmProjectCreate
       Align = alTop
       Caption = 'Name:'
       TabOrder = 0
-      ExplicitTop = 81
       object edtProjectName: TEdit
         Left = 16
         Top = 16
@@ -91,8 +86,6 @@ object fmProjectCreate: TfmProjectCreate
       ModalResult = 1
       ParentDoubleBuffered = False
       TabOrder = 2
-      ExplicitTop = 248
-      ExplicitWidth = 75
     end
     object btnCancel: TBitBtn
       Left = 126
@@ -105,8 +98,6 @@ object fmProjectCreate: TfmProjectCreate
       ModalResult = 2
       ParentDoubleBuffered = False
       TabOrder = 3
-      ExplicitTop = 248
-      ExplicitWidth = 75
     end
   end
 end

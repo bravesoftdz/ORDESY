@@ -103,7 +103,8 @@ var
 begin
   Result:= false;
   if not FileExists(ExtractFilePath(ParamStr(0)) + aFileName) then
-    raise Exception.Create('Options file "' + ExtractFilePath(ParamStr(0)) + aFileName + '" not exists!');
+    Exit;
+    //raise Exception.Create('Options file "' + ExtractFilePath(ParamStr(0)) + aFileName + '" not exists!');
   try
     SetLength(FOptions, 0);
     iniFile:= TIniFile.Create(ExtractFilePath(ParamStr(0)) + aFileName);

@@ -56,15 +56,18 @@ type
     BitBtn1: TBitBtn;
     procedure miExitClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
-    procedure BitBtn1Click(Sender: TObject);
     procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
     procedure splMainMoved(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure WMWindowPosChanged(var aMessage: TWMWindowPosChanged); message WM_WINDOWPOSCHANGED;
+    procedure miCreateProjectClick(Sender: TObject);
   private
     AppOptions: TOptions;
+    ProjectList: TORDESYProjectList;
+    GroupList: TGroupList;
     procedure PrepareGUI;
     procedure PrepareOptions;
+    procedure PrepareProjects;
   public
     procedure InitApp;
     procedure FreeApp;
@@ -76,11 +79,6 @@ var
 implementation
 
 {$R *.dfm}
-
-procedure TfmMain.BitBtn1Click(Sender: TObject);
-begin
-  ShowProjectCreateDialog(AppOptions.UserName);
-end;
 
 procedure TfmMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
@@ -98,8 +96,11 @@ begin
     AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
     AppOptions.SetOption('GUI', 'FormLeft', inttostr(fmMain.Left));
     AppOptions.SetOption('GUI', 'FormTop', inttostr(fmMain.Top));
-    if not AppOptions.SaveUserOptions() then
-      raise Exception.Create('Cant''t save user options!');
+    AppOptions.SaveUserOptions();
+    {if not AppOptions.SaveUserOptions() then
+      raise Exception.Create('Cant''t save user options!');}
+    //ProjectList.SaveToFile();
+    GroupList.SaveGroups();
   except
   on E: Exception do
     begin
@@ -117,7 +118,16 @@ end;
 procedure TfmMain.InitApp;
 begin
   PrepareOptions;
+  PrepareProjects;
   PrepareGUI;
+end;
+
+procedure TfmMain.miCreateProjectClick(Sender: TObject);
+begin
+  if ShowProjectCreateDialog(AppOptions.UserName, ProjectList) then
+  begin
+    //ShowMessage(inttostr(ProjectList.Count));
+  end;
 end;
 
 procedure TfmMain.miExitClick(Sender: TObject);
@@ -152,14 +162,38 @@ begin
       AppOptions:= TOptions.Create;
     AppOptions.AppTitle:= Application.Title;
     AppOptions.UserName:= GetWindowsUser; //Узнаем текущее имя пользователя
-    if not AppOptions.LoadUserOptions() then
-      raise Exception.Create('Cant''t load user options!');
+    AppOptions.LoadUserOptions();
+    {if not AppOptions.LoadUserOptions() then
+      raise Exception.Create('Cant''t load user options!');}
+    if not Assigned(GroupList) then
+      GroupList:= TGroupList.Create();
+    GroupList.LoadGroups();
   except
     on E: Exception do
     begin
       {$IFDEF Debug}
       AddToLog(ClassName + ' | PrepareOptions | ' + E.Message);
       MessageBox(Application.Handle, PChar(ClassName + ' | PrepareOptions | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
+end;
+
+procedure TfmMain.PrepareProjects;
+begin
+  try
+    if not Assigned(ProjectList) then
+      ProjectList:= TORDESYProjectList.Create;
+    if not ProjectList.LoadFromFile() then
+      raise Exception.Create('Error while loading project list. Please check the files/folders!');
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | PrepareProjects | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | PrepareProjects | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ELSE}
       MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
@@ -193,6 +227,8 @@ begin
       end
     else if TObject(Node.Data) is TOraScheme then
       Node.ImageIndex:= 52
+    else if TObject(Node.Data) is TOraBase then
+      Node.ImageIndex:= 50
     else if TObject(Node.Data) is TORDESYModule then
       if Node.HasChildren and Node.Expanded then
         Node.ImageIndex:= 55
