@@ -68,7 +68,7 @@ type
     procedure PrepareGUI;
     procedure PrepareOptions;
     procedure PrepareProjects;
-    procedure UpdateGroups;
+    procedure InitProjects;
   public
     procedure InitApp;
     procedure FreeApp;
@@ -123,11 +123,55 @@ begin
   PrepareGUI;
 end;
 
+procedure TfmMain.InitProjects;
+var
+  iPL, iM, iB, iSc, Ii: integer;
+  iProject: TORDESYProject;
+  iModule: TORDESYModule;
+  iBase: TOraBase;
+  iScheme: TOraScheme;
+  iItem: TOraItem;
+  ProjectAdded, ModuleAdded, BaseAdded, SchemeAdded, ItemAdded: TTreeNode;
+  //inList: array of TORDESYProject;
+begin
+  if ProjectList.Count <= 0 then
+    Exit;
+  //SetLength(inList, 0);
+  tvMain.Items.BeginUpdate;
+  tvMain.Items.Clear;
+  for iPL := 0 to ProjectList.Count - 1 do
+  begin
+    iProject:= ProjectList.GetProjectByIndex(iPL);
+    ProjectAdded:= tvMain.Items.AddObject(nil, iProject.Name, iProject);
+    for iM := 0 to iProject.ModuleCount - 1 do
+    begin
+      iModule:= iProject.GetModule(iM);
+      ModuleAdded:= tvMain.Items.AddChildObject(ProjectAdded, iModule.Name, iModule);
+      for iB := 0 to iProject.OraBaseCount - 1 do
+      begin
+        iBase:= iProject.GetOraBase(iB);
+        BaseAdded:= tvMain.Items.AddChildObject(ModuleAdded, iBase.Name, iBase);
+        for iSc := 0 to iProject.OraSchemeCount - 1 do
+        begin
+          iScheme:= iProject.GetOraScheme(iSc);
+          SchemeAdded:= tvMain.Items.AddChildObject(BaseAdded, iScheme.Login, iScheme);
+          for Ii := 0 to iProject.OraItemCount - 1 do
+          begin
+            iItem:= iProject.GetOraItem(Ii);
+            ItemAdded:= tvMain.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
+          end;
+        end;
+      end;
+    end;
+  end;
+  tvMain.Items.EndUpdate;
+end;
+
 procedure TfmMain.miCreateProjectClick(Sender: TObject);
 begin
   if ShowProjectCreateDialog(AppOptions.UserName, ProjectList) then
   begin
-    UpdateGroups;
+    InitProjects;
     //ShowMessage(inttostr(ProjectList.Count));
   end;
 end;
@@ -184,12 +228,31 @@ begin
 end;
 
 procedure TfmMain.PrepareProjects;
+//TEST
+var
+  iProject: TORDESYProject;
+  {iModule: TORDESYModule;
+  iBase: TOraBase;
+  iScheme: TOraScheme;
+  iItem: TOraItem;}
+//END TEST
 begin
   try
     if not Assigned(ProjectList) then
       ProjectList:= TORDESYProjectList.Create;
-    if not ProjectList.LoadFromFile() then
-      raise Exception.Create('Error while loading project list. Please check the files/folders!');
+    //if not ProjectList.LoadFromFile() then
+    //  raise Exception.Create('Error while loading project list. Please check the files/folders!');
+    //TEST
+    {iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'ORDESY PROJECT');
+    iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module'));
+    iProject.AddOraBase(TOraBase.Create(iProject.GetFreeBaseId, 'Some BASE'));
+    iProject.AddOraScheme(TOraScheme.Create(iProject.GetFreeSchemeId, 'Scheme of SOME BASE', 'pass', iProject.GetFreeBaseId - 1, iProject.GetFreeModuleId - 1));
+    iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PROC_1', 'procedure', OraProcedure));
+    iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'FUNC_1', 'function', OraFunction));
+    iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PACK_1', 'package', OraPackage));
+    ProjectList.AddProject(iProject);}
+    //END TEST
+    InitProjects;
   except
     on E: Exception do
     begin
@@ -251,18 +314,6 @@ begin
       MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
     end;
-  end;
-end;
-
-procedure TfmMain.UpdateGroups;
-var
-  i: integer;
-begin
-  if ProjectList.Count <= 0 then
-    Exit;
-  for i := 0 to ProjectList.Count - 1 do
-  begin
-
   end;
 end;
 

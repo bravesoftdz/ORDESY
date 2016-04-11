@@ -7,7 +7,7 @@ uses
   uLog,
   {$ENDIF}
   uExplode, uConnection, uShellFuncs,
-  Generics.Collections, SysUtils, Forms, Windows;
+  Generics.Collections, SysUtils, Forms, Windows, Classes;
 
 type
   TOraItemType = (OraProcedure, OraFunction, OraPackage);
@@ -160,6 +160,10 @@ type
     FOraBases: array of TOraBase;
     FOraSchemes: array of TOraScheme;
     FOraItems: array of TOraItem;
+    function GetOraItemCount: integer;
+    function GetModuleCount: integer;
+    function GetOraBaseCount: integer;
+    function GetOraSchemeCount: integer;
   public
     constructor Create(const aId: integer; const aName: string = 'New Project'; const aDescription: string = 'About new project...'; const aCreator: string = 'nobody');
     destructor Destroy; override;
@@ -169,19 +173,19 @@ type
     function GetFreeItemId: integer;
     // Item
     procedure AddOraItem(aItem: TOraItem);
-    procedure GetOraItem(const aIndex: integer; var aItem: TOraItem);
+    function GetOraItem(const aIndex: integer): TOraItem;
     function GetOraItemName(const aIndex: integer): string;
     // Base
     procedure AddOraBase(aBase: TOraBase);
-    procedure GetOraBase(const aIndex: integer; var aBase: TOraBase);
+    function GetOraBase(const aIndex: integer): TOraBase;
     function GetOraBaseName(const aIndex: integer): string;
     // Scheme
     procedure AddOraScheme(aScheme: TOraScheme);
-    procedure GetOraScheme(const aIndex: integer; var aScheme: TOraScheme);
+    function GetOraScheme(const aIndex: integer): TOraScheme;
     function GetOraSchemeLogin(const aIndex: integer): string;
     // Module
     procedure AddModule(aModule: TORDESYModule);
-    procedure GetModule(const aIndex: integer; var aModule: TORDESYModule);
+    function GetModule(const aIndex: integer): TORDESYModule;
     function GetModuleName(const aIndex: integer): string;
     // WRAP DEPLOY!
     procedure WrapItem(const aSchemeId: integer; const aName: string; const aType: TOraItemType; const aGroupId: integer);
@@ -191,21 +195,34 @@ type
     property Creator: string read FCreator write FCreator;
     property Name: string read FName write FName;
     property GroupId: integer read FGroupId write FGroupId;
+    //
+    property ModuleCount: integer read GetModuleCount;
+    property OraBaseCount: integer read GetOraBaseCount;
+    property OraSchemeCount: integer read GetOraSchemeCount;
+    property OraItemCount: integer read GetOraItemCount;
   end;
 
   TORDESYProjectList = class
   private
     FProjects: array of TORDESYProject;
     FSaved: boolean;
+    FOnProjectAdd: TNotifyEvent;
+    FOnProjectRemove: TNotifyEvent;
     function GetProjectsCount: integer;
   public
     constructor Create;
     procedure AddProject(aProject: TORDESYProject);
+    procedure RemoveProject(const aIndex: integer);
     function GetFreeProjectId: integer;
+    function GetProjectByIndex(const aIndex: integer): TORDESYProject;
+    function GetProjectById(const aId: integer): TORDESYProject;
     function LoadFromFile(const aFileName: string = 'ORDESY.data'): boolean;
     function SaveToFile(const aFileName: string = 'ORDESY.data'): boolean;
     property Count: integer read GetProjectsCount;
     property Saved: boolean read FSaved;
+  published
+    property OnProjectAdd: TNotifyEvent read FOnProjectAdd write FOnProjectAdd;
+    property OnProjectRemove: TNotifyEvent read FOnProjectRemove write FOnProjectRemove;
   end;
 
 implementation
@@ -391,8 +408,7 @@ begin
   Result:= NewId;
 end;
 
-procedure TORDESYProject.GetModule(const aIndex: integer;
-  var aModule: TORDESYModule);
+function TORDESYProject.GetModule(const aIndex: integer): TORDESYModule;
 var
   i: integer;
 begin
@@ -400,11 +416,16 @@ begin
   begin
     if FORDESYModules[i].FId = aIndex then
     begin
-      aModule:= FORDESYModules[i];
+      Result:= FORDESYModules[i];
       Exit;
     end;
   end;
-  aModule:= nil;
+  Result:= nil;
+end;
+
+function TORDESYProject.GetModuleCount: integer;
+begin
+  Result:= length(FORDESYModules);
 end;
 
 function TORDESYProject.GetModuleName(const aIndex: integer): string;
@@ -417,7 +438,7 @@ begin
       Result:= FORDESYModules[i].Name;
 end;
 
-procedure TORDESYProject.GetOraBase(const aIndex: integer; var aBase: TOraBase);
+function TORDESYProject.GetOraBase(const aIndex: integer): TOraBase;
 var
   i: integer;
 begin
@@ -425,11 +446,16 @@ begin
   begin
     if FOraBases[i].FId = aIndex then
     begin
-      aBase:= FOraBases[i];
+      Result:= FOraBases[i];
       Exit;
     end;
   end;
-  aBase:= nil;
+  Result:= nil;
+end;
+
+function TORDESYProject.GetOraBaseCount: integer;
+begin
+  Result:= Length(FOraBases);
 end;
 
 function TORDESYProject.GetOraBaseName(const aIndex: integer): string;
@@ -442,7 +468,7 @@ begin
       Result:= FOraBases[i].Name;
 end;
 
-procedure TORDESYProject.GetOraItem(const aIndex: integer; var aItem: TOraItem);
+function TORDESYProject.GetOraItem(const aIndex: integer): TOraItem;
 var
   i: integer;
 begin
@@ -450,11 +476,16 @@ begin
   begin
     if FOraItems[i].FId = aIndex then
     begin
-      aItem:= FOraItems[i];
+      Result:= FOraItems[i];
       Exit;
     end;
   end;
-  aItem:= nil;
+  Result:= nil;
+end;
+
+function TORDESYProject.GetOraItemCount: integer;
+begin
+  Result:= length(FOraItems);
 end;
 
 function TORDESYProject.GetOraItemName(const aIndex: integer): string;
@@ -467,8 +498,7 @@ begin
       Result:= FOraItems[i].Name;
 end;
 
-procedure TORDESYProject.GetOraScheme(const aIndex: integer;
-  var aScheme: TOraScheme);
+function TORDESYProject.GetOraScheme(const aIndex: integer): TOraScheme;
 var
   i: integer;
 begin
@@ -476,11 +506,16 @@ begin
   begin
     if FOraSchemes[i].FId = aIndex then
     begin
-      aScheme:= FOraSchemes[i];
+      Result:= FOraSchemes[i];
       Exit;
     end;
   end;
-  aScheme:= nil;
+  Result:= nil;
+end;
+
+function TORDESYProject.GetOraSchemeCount: integer;
+begin
+  Result:= Length(FOraSchemes);
 end;
 
 function TORDESYProject.GetOraSchemeLogin(const aIndex: integer): string;
@@ -503,9 +538,9 @@ var
   firstItem: boolean;
 begin
   try
-    GetOraScheme(aSchemeId, iScheme);
-    GetModule(iScheme.FModuleId, iModule);
-    GetOraBase(iScheme.FBaseId, iBase);
+    iScheme:= GetOraScheme(aSchemeId);
+    iModule:= GetModule(iScheme.FModuleId);
+    iBase:= GetOraBase(iScheme.FBaseId);
     if (not Assigned(iScheme) or not Assigned(iModule) or not Assigned(iBase)) then
       raise Exception.Create('Some of objects not created!');
     if not iScheme.Connected then
@@ -1006,6 +1041,8 @@ begin
   end;
   SetLength(FProjects, length(FProjects) + 1);
   FProjects[high(FProjects)]:= aProject;
+  if Assigned(FOnProjectAdd) then
+    FOnProjectAdd(Self);
 end;
 
 constructor TORDESYProjectList.Create;
@@ -1032,6 +1069,24 @@ begin
   Result:= NewId;
 end;
 
+function TORDESYProjectList.GetProjectById(const aId: integer): TORDESYProject;
+var
+  i: integer;
+begin
+  for i := 0 to high(FProjects) do
+  begin
+    if FProjects[i].Id = aId then
+      Result:= FProjects[i];
+  end;
+end;
+
+function TORDESYProjectList.GetProjectByIndex(
+  const aIndex: integer): TORDESYProject;
+begin
+  if (aIndex >= 0) and (aIndex <= high(FProjects)) then
+    Result:= FProjects[aIndex];
+end;
+
 function TORDESYProjectList.GetProjectsCount: integer;
 begin
   Result:= Length(FProjects);
@@ -1051,6 +1106,24 @@ begin
       {$ELSE}
       MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
+    end;
+  end;
+end;
+
+procedure TORDESYProjectList.RemoveProject(const aIndex: integer);
+var
+  i: integer;
+  LastItem: TORDESYProject;
+begin
+  for i := 0 to high(FProjects) do
+  begin
+    if FProjects[i].Id = aIndex then
+    begin
+      LastItem:= FProjects[high(FProjects)];
+      FProjects[i]:= LastItem;
+      SetLength(FProjects, length(FProjects) - 1);
+      if Assigned(FOnProjectRemove) then
+        FOnProjectRemove(Self);
     end;
   end;
 end;
