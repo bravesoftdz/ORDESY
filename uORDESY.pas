@@ -9,6 +9,9 @@ uses
   uExplode, uConnection, uShellFuncs,
   Generics.Collections, SysUtils, Forms, Windows, Classes;
 
+Const
+  ORDESYVERSION = '1.0';
+
 type
   TOraItemType = (OraProcedure, OraFunction, OraPackage);
 
@@ -16,6 +19,7 @@ type
     Scheme: string;
     Order: integer;
   end;}
+
 
   { Forward declarations }
 
@@ -77,12 +81,12 @@ type
   TOraItem = class
   private
     FId : integer;
-    FGroupId: integer;
+    //FGroupId: integer;
     FSchemeId: integer;
     FType: TOraItemType;
     FName: string;
     FBody: WideString;
-    FLastChange: TDatetime;
+    //FLastChange: TDatetime;
   public
     constructor Create(const aId, aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aGroupId: integer = 0);
     class function GetItemSqlType(const aType: TOraItemType): string;
@@ -94,25 +98,25 @@ type
     property ItemType: TOraItemType read FType write FType;
     property ItemBody: widestring read FBody write FBody;
     property SchemeId: integer read FSchemeId write FSchemeId;
-    property GroupId: integer read FGroupId write FGroupId;
+    //property GroupId: integer read FGroupId write FGroupId;
   end;
 
   TOraBase = class
   private
     FId: integer;
-    FGroupId: integer;
+    //FGroupId: integer;
     FName: string;
   public
     constructor Create(const aId: integer; const aName: string);
     property Id: integer read FId;
     property Name: string read FName write FName;
-    property GroupId: integer read FGroupId write FGroupId;
+    //property GroupId: integer read FGroupId write FGroupId;
   end;
 
   TOraScheme = class
   private
     FId: integer;
-    FGroupId: integer;         //Идентификатор списка (тут будет и название)
+    //FGroupId: integer;         //Идентификатор списка (тут будет и название)
     FBaseId: integer;
     FModuleId: integer;
     FLogin: string;
@@ -128,7 +132,7 @@ type
     property Id: integer read FId;
     property Login: string read FLogin write FLogin;
     property Pass: string read FPass write FPass;
-    property GroupId: integer read FGroupId write FGroupId;
+    //property GroupId: integer read FGroupId write FGroupId;
     property Connection: TConnection read FConnection write FConnection;
     property Connected: boolean read FConnected;
     property Valid: boolean read FValid;
@@ -139,13 +143,13 @@ type
     FId: integer;
     FName: string;
     FDescription: WideString;
-    FGroupId: integer;
+    //FGroupId: integer;
   public
     constructor Create(const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = ''; const aGroupId: integer = 0);
     property Id: integer read FId;
     property Name: string read FName write FName;
     property Description: widestring read FDescription write FDescription;
-    property GroupId: integer read FGroupId write FGroupId;
+    //property GroupId: integer read FGroupId write FGroupId;
   end;
 
   TORDESYProject = class
@@ -154,7 +158,7 @@ type
     FName: string;
     FDescription: string;
     FCreator: string;
-    FGroupId: integer;
+    //FGroupId: integer;
     FDateCreate: TDateTime;
     FORDESYModules: array of TORDESYModule;
     FOraBases: array of TOraBase;
@@ -165,7 +169,7 @@ type
     function GetOraBaseCount: integer;
     function GetOraSchemeCount: integer;
   public
-    constructor Create(const aId: integer; const aName: string = 'New Project'; const aDescription: string = 'About new project...'; const aCreator: string = 'nobody');
+    constructor Create(const aId: integer; const aName: string = 'New Project'; const aDescription: string = 'About new project...'; const aCreator: string = 'nobody'; const aDateCreate: TDateTime = 0);
     destructor Destroy; override;
     function GetFreeModuleId: integer;
     function GetFreeBaseId: integer;
@@ -194,7 +198,7 @@ type
     property Id: integer read FId;
     property Creator: string read FCreator write FCreator;
     property Name: string read FName write FName;
-    property GroupId: integer read FGroupId write FGroupId;
+    //property GroupId: integer read FGroupId write FGroupId;
     //
     property ModuleCount: integer read GetModuleCount;
     property OraBaseCount: integer read GetOraBaseCount;
@@ -208,6 +212,7 @@ type
     FSaved: boolean;
     FOnProjectAdd: TNotifyEvent;
     FOnProjectRemove: TNotifyEvent;
+    procedure Clear;
     function GetProjectsCount: integer;
   public
     constructor Create;
@@ -237,7 +242,7 @@ begin
   FName:= aName;
   FBody:= aBody;
   FSchemeId:= aSchemeId;
-  FGroupId:= aGroupId;
+  //FGroupId:= aGroupId;
 end;
 
 { TORDESYProject }
@@ -294,14 +299,17 @@ begin
   FOraSchemes[high(FOraSchemes)]:= aScheme;
 end;
 
-constructor TORDESYProject.Create(const aId: integer; const aName: string; const aDescription: string; const aCreator: string);
+constructor TORDESYProject.Create(const aId: integer; const aName: string; const aDescription: string; const aCreator: string; const aDateCreate: TDateTime);
 begin
   inherited Create;
   FId:= aId;
   FName:= aName;
   FDescription:= aDescription;
   FCreator:= aCreator;
-  FDateCreate:= Time;
+  if aDateCreate = 0 then
+    FDateCreate:= Time
+  else
+    FDateCreate:= aDateCreate;
 end;
 
 procedure TORDESYProject.DeployItem(const aItemId: integer);
@@ -885,16 +893,16 @@ begin
     end;
   except
     on E: Exception do
-      begin
-        FValid:= false;
-        FConnected:= false;
-        {$IFDEF Debug}
-        AddToLog(E.Message);
-        MessageBox(Application.Handle, PChar(ClassName + ' | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-        {$ELSE}
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-        {$ENDIF}
-      end;
+    begin
+      FValid:= false;
+      FConnected:= false;
+      {$IFDEF Debug}
+      AddToLog(E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
   end;
 end;
 
@@ -906,7 +914,7 @@ begin
   FPass:= aPass;
   FBaseId:= aBaseId;
   FModuleId:= aModuleId;
-  FGroupId:= aGroupId;
+  //FGroupId:= aGroupId;
 end;
 
 destructor TOraScheme.Destroy;
@@ -945,7 +953,8 @@ begin
   case aType of
     OraProcedure: Result:= 'PROCEDURE';
     OraFunction: Result:= 'FUNCTION';
-    OraPackage: Result:= 'PACKAGE';
+    OraPackage: Result:= 'PACKAGE'
+  else Result:= 'PROCEDURE';
   end;
 end;
 
@@ -1045,6 +1054,16 @@ begin
     FOnProjectAdd(Self);
 end;
 
+procedure TORDESYProjectList.Clear;
+var
+  i: integer;
+begin
+  for i := 0 to high(FProjects) do
+    FProjects[i].Free;
+  SetLength(FProjects, 0);
+  FSaved:= false;
+end;
+
 constructor TORDESYProjectList.Create;
 begin
   inherited Create;
@@ -1093,13 +1112,67 @@ begin
 end;
 
 function TORDESYProjectList.LoadFromFile(const aFileName: string): boolean;
+var
+  iHandle: integer;
+  iP, iM, iB, iSc, Ii: integer;
+  iFileHeader, iFileVersion, iName, iDescription, iCreator: PChar;
+  iProjectCount, iModuleCount: integer;
+  iId: integer;
+  iDateCreate: TDateTime;
+  iProject: TORDESYProject;
+  iModule: TORDESYModule;
+  iBase: TOraBase;
+  iScheme: TOraScheme;
+  iItem: TOraItem;
 begin
   Result:= false;
   try
+    if not FileExists(aFileName) then
+    begin
+      Result:= true;
+      Exit;
+    end;
+    Clear;
+    try
+      iHandle:= FileOpen(aFileName, fmOpenRead);
+      if iHandle = -1 then
+        raise Exception.Create(SysErrorMessage(GetLastError));
+      iFileHeader:= PChar(AllocMem($FF));
+      iFileVersion:= PChar(AllocMem($FF));
+      FileRead(iHandle, iFileHeader^, $FF);
+      FileRead(iHandle, iFileVersion^, $FF);
+      if iFileVersion <> ORDESYVERSION then
+        raise Exception.Create('Incorrect project version! Need: ' + ORDESYVERSION);
+        //MessageBox(Application.Handle, PChar(iFileHeader + ' - ' + iFileVersion), Pchar('ERROR'), 0);
+      FileRead(iHandle, iProjectCount, sizeof(iProjectCount));
+      for iP:= 0 to iProjectCount - 1 do
+      begin
+        iName:= PChar(AllocMem($1FF));
+        iDescription:= PChar(AllocMem($FFF));
+        FileRead(iHandle, iId, sizeof(iId));
+        FileRead(iHandle, iName^, sizeof(iName));
+        FileRead(iHandle, iDescription^, SizeOf(iDescription));
+        FileRead(iHandle, iCreator^, SizeOf(iCreator));
+        FileRead(iHandle, iDateCreate, SizeOf(iDateCreate));
+        //
+        iProject:= TORDESYProject.Create(iId, iName, iDescription, iCreator, iDateCreate);
+        //
+        FileRead(iHandle, iModuleCount, sizeof(iModuleCount));
+        for iM := 0 to iModuleCount - 1 do
+        begin
 
+        end;
+        AddProject(iProject);
+      end;
+      Result:= true;
+    finally
+      FreeMem(iFileHeader, $FF);
+      FreeMem(iFileVersion, $FF);
+      FileClose(iHandle);
+    end;
   except
     on E: Exception do
-      begin
+    begin
       {$IFDEF Debug}
       AddToLog(ClassName + ' | LoadFromFile | ' + E.Message);
       MessageBox(Application.Handle, PChar(ClassName + ' | LoadFromFile | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
@@ -1130,39 +1203,49 @@ end;
 
 function TORDESYProjectList.SaveToFile(const aFileName: string): boolean;
 var
-  i, n: integer;
+  iP, iM: integer;
+  iHandle: integer;
+  iProjectCount, iModuleCount: integer;
+  iProject: TORDESYProject;
+  iModule: TORDESYModule;
+  iBase: TOraBase;
+  iScheme: TOraScheme;
+  iItem: TOraItem;
 begin
   Result:= false;
   FSaved:= false;
   try
     try
-      {iniFile:= TIniFile.Create(ExtractFilePath(ParamStr(0)) + aFileName);
-      for i := 0 to high(FProjects) do
+      iProjectCount:= Count;
+      iHandle:= FileCreate(aFileName);
+      FileWrite(iHandle, 'ORDESY PROJECT', $FF);
+      FileWrite(iHandle, ORDESYVERSION, $FF);
+      FileWrite(iHandle, iProjectCount, sizeof(iProjectCount));
+      for iP := 0 to iProjectCount - 1 do
       begin
-        iniFile.WriteString('Project', FProjects[i].Name, inttostr(FProjects[i].FId));
-        // Bases
-        for n := 0 to high(FProjects[i].FOraBases) do
+        iProject:= FProjects[iP];
+        FileWrite(iHandle, iProject.FId, sizeof(iProject.FId));
+        FileWrite(iHandle, iProject.FName[1], $1FF);
+        FileWrite(iHandle, iProject.FDescription[1], $FFF);
+        FileWrite(iHandle, iProject.FCreator[1], $1FF);
+        FileWrite(iHandle, iProject.FDateCreate, sizeof(iProject.FDateCreate));
+        iModuleCount:= iProject.ModuleCount;
+        FileWrite(iHandle, iModuleCount, sizeof(iModuleCount));
+        for iM := 0 to iModuleCount - 1 do
         begin
-          iniFile.WriteString(FProjects[i].Name + '_Base', FProjects[i].FOraBases[n].Name, inttostr(FProjects[i].FOraBases[n].Id));
+          iModule:= iProject.GetModule(iM);
+          FileWrite(iHandle, iModule.Id, sizeof(iModule.Id));
+          FileWrite(iHandle, iModule.Name[1], $1FF);
+          FileWrite(iHandle, iModule.Description[1], $FFF);
         end;
-        // Schemes
-        for n := 0 to high(FProjects[i].FOraSchemes) do
-        begin
-          iniFile.WriteString(FProjects[i].Name + '_Scheme_' + FProjects[i].FOraSchemes[n].FLogin, inttostr(FProjects[i].FOraSchemes[n].Id), FProjects[i].FOraSchemes[n].FPass);
-        end;
-        // Modules
-        for n := 0 to high(FProjects[i].FORDESYModules) do
-        begin
-          iniFile.WriteString(FProjects[i].Name + '_Module_' + FProjects[i].FORDESYModules[n].FName, inttostr(FProjects[i].FORDESYModules[n].Id), FProjects[i].FORDESYModules[n].FPass);
-        end;
-      end; }
+      end;
       FSaved:= true;
     finally
-
+      FileClose(iHandle);
     end;
   except
     on E: Exception do
-      begin
+    begin
       {$IFDEF Debug}
       AddToLog(ClassName + ' | SaveToFile | ' + E.Message);
       MessageBox(Application.Handle, PChar(ClassName + ' | SaveToFile | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
@@ -1181,7 +1264,7 @@ begin
   FId:= aId;
   FName:= aName;
   FDescription:= aDescription;
-  FGroupId:= aGroupId;
+  //FGroupId:= aGroupId;
 end;
 
 end.

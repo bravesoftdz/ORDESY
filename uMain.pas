@@ -54,6 +54,12 @@ type
     miHelp: TMenuItem;
     splMain: TSplitter;
     BitBtn1: TBitBtn;
+    miBase: TMenuItem;
+    miCreateBase: TMenuItem;
+    miModule: TMenuItem;
+    miBaseOptions: TMenuItem;
+    miCreateModule: TMenuItem;
+    miModuleOptions: TMenuItem;
     procedure miExitClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
@@ -61,14 +67,15 @@ type
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure WMWindowPosChanged(var aMessage: TWMWindowPosChanged); message WM_WINDOWPOSCHANGED;
     procedure miCreateProjectClick(Sender: TObject);
+    procedure ViewProjects(aTreeView: TTreeView);
   private
     AppOptions: TOptions;
     ProjectList: TORDESYProjectList;
-    GroupList: TGroupList;
+    //GroupList: TGroupList;
     procedure PrepareGUI;
+    procedure UpdateGUI;
     procedure PrepareOptions;
     procedure PrepareProjects;
-    procedure InitProjects;
   public
     procedure InitApp;
     procedure FreeApp;
@@ -98,10 +105,11 @@ begin
     AppOptions.SetOption('GUI', 'FormLeft', inttostr(fmMain.Left));
     AppOptions.SetOption('GUI', 'FormTop', inttostr(fmMain.Top));
     AppOptions.SaveUserOptions();
+    ProjectList.Free;
     {if not AppOptions.SaveUserOptions() then
       raise Exception.Create('Cant''t save user options!');}
     //ProjectList.SaveToFile();
-    GroupList.SaveGroups();
+    //GroupList.SaveGroups();
   except
   on E: Exception do
     begin
@@ -123,7 +131,7 @@ begin
   PrepareGUI;
 end;
 
-procedure TfmMain.InitProjects;
+procedure TfmMain.ViewProjects(aTreeView: TTreeView);
 var
   iPL, iM, iB, iSc, Ii: integer;
   iProject: TORDESYProject;
@@ -132,13 +140,11 @@ var
   iScheme: TOraScheme;
   iItem: TOraItem;
   ProjectAdded, ModuleAdded, BaseAdded, SchemeAdded, ItemAdded: TTreeNode;
-  //inList: array of TORDESYProject;
 begin
   if ProjectList.Count <= 0 then
     Exit;
-  //SetLength(inList, 0);
-  tvMain.Items.BeginUpdate;
-  tvMain.Items.Clear;
+  aTreeView.Items.BeginUpdate;
+  aTreeView.Items.Clear;
   for iPL := 0 to ProjectList.Count - 1 do
   begin
     iProject:= ProjectList.GetProjectByIndex(iPL);
@@ -164,15 +170,14 @@ begin
       end;
     end;
   end;
-  tvMain.Items.EndUpdate;
+  aTreeView.Items.EndUpdate;
 end;
 
 procedure TfmMain.miCreateProjectClick(Sender: TObject);
 begin
   if ShowProjectCreateDialog(AppOptions.UserName, ProjectList) then
   begin
-    InitProjects;
-    //ShowMessage(inttostr(ProjectList.Count));
+    UpdateGUI;
   end;
 end;
 
@@ -211,9 +216,9 @@ begin
     AppOptions.LoadUserOptions();
     {if not AppOptions.LoadUserOptions() then
       raise Exception.Create('Cant''t load user options!');}
-    if not Assigned(GroupList) then
+    {if not Assigned(GroupList) then
       GroupList:= TGroupList.Create();
-    GroupList.LoadGroups();
+    GroupList.LoadGroups();}
   except
     on E: Exception do
     begin
@@ -231,17 +236,19 @@ procedure TfmMain.PrepareProjects;
 //TEST
 var
   iProject: TORDESYProject;
-  {iModule: TORDESYModule;
+  iModule: TORDESYModule;
   iBase: TOraBase;
   iScheme: TOraScheme;
-  iItem: TOraItem;}
+  iItem: TOraItem;
 //END TEST
 begin
   try
     if not Assigned(ProjectList) then
       ProjectList:= TORDESYProjectList.Create;
-    //if not ProjectList.LoadFromFile() then
-    //  raise Exception.Create('Error while loading project list. Please check the files/folders!');
+    {ProjectList.OnProjectAdd:= ViewProjects(tvMain);
+    ProjectList.OnProjectRemove:= ViewProjects(tvMain);}
+    if not ProjectList.LoadFromFile() then
+      raise Exception.Create('Error while loading project list. Please check the files/folders!');
     //TEST
     {iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'ORDESY PROJECT');
     iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module'));
@@ -250,9 +257,9 @@ begin
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PROC_1', 'procedure', OraProcedure));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'FUNC_1', 'function', OraFunction));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PACK_1', 'package', OraPackage));
-    ProjectList.AddProject(iProject);}
+    ProjectList.AddProject(iProject);
+    ProjectList.SaveToFile();}
     //END TEST
-    InitProjects;
   except
     on E: Exception do
     begin
@@ -315,6 +322,11 @@ begin
       {$ENDIF}
     end;
   end;
+end;
+
+procedure TfmMain.UpdateGUI;
+begin
+  ViewProjects(tvMain);
 end;
 
 procedure TfmMain.WMWindowPosChanged(var aMessage: TWMWindowPosChanged);

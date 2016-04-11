@@ -139,6 +139,24 @@ object fmMain: TfmMain
         end
       end
     end
+    object miModule: TMenuItem
+      Caption = 'Module'
+      object miCreateModule: TMenuItem
+        Caption = 'Create module'
+      end
+      object miModuleOptions: TMenuItem
+        Caption = 'Module options'
+      end
+    end
+    object miBase: TMenuItem
+      Caption = 'Base'
+      object miCreateBase: TMenuItem
+        Caption = 'Create base'
+      end
+      object miBaseOptions: TMenuItem
+        Caption = 'Base options'
+      end
+    end
     object miScheme: TMenuItem
       Caption = 'Scheme'
       object miCreateScheme: TMenuItem
