@@ -9,7 +9,8 @@ uses
   uExplode, uConnection, uShellFuncs,
   Generics.Collections, SysUtils, Forms, Windows, Classes;
 
-Const
+const
+  ORDESYNAME = 'ORDESY PROJECT';
   ORDESYVERSION = '1.0';
 
 type
@@ -130,6 +131,8 @@ type
     procedure Connect(var aProject: TORDESYProject);
     procedure Disconnect;
     property Id: integer read FId;
+    property ModuleId: integer read FModuleId write FModuleId;
+    property BaseId: integer read FBaseId write FBaseId;
     property Login: string read FLogin write FLogin;
     property Pass: string read FPass write FPass;
     //property GroupId: integer read FGroupId write FGroupId;
@@ -256,7 +259,7 @@ begin
     if FORDESYModules[i].Id = aModule.Id then
       Exit;
   end;
-  SetLength(FORDESYModules, length(FOraBases) + 1);
+  SetLength(FORDESYModules, length(FORDESYModules) + 1);
   FORDESYModules[high(FORDESYModules)]:= aModule;
 end;
 
@@ -1114,7 +1117,7 @@ end;
 function TORDESYProjectList.LoadFromFile(const aFileName: string): boolean;
 var
   iHandle: integer;
-  iP, iM, iB, iSc, Ii: integer;
+  iP, iM, iB, iSc, Ii, strLen: integer;
   iFileHeader, iFileVersion, iName, iDescription, iCreator: PChar;
   iProjectCount, iModuleCount: integer;
   iId: integer;
@@ -1137,37 +1140,59 @@ begin
       iHandle:= FileOpen(aFileName, fmOpenRead);
       if iHandle = -1 then
         raise Exception.Create(SysErrorMessage(GetLastError));
-      iFileHeader:= PChar(AllocMem($FF));
-      iFileVersion:= PChar(AllocMem($FF));
-      FileRead(iHandle, iFileHeader^, $FF);
-      FileRead(iHandle, iFileVersion^, $FF);
-      if iFileVersion <> ORDESYVERSION then
-        raise Exception.Create('Incorrect project version! Need: ' + ORDESYVERSION);
-        //MessageBox(Application.Handle, PChar(iFileHeader + ' - ' + iFileVersion), Pchar('ERROR'), 0);
-      FileRead(iHandle, iProjectCount, sizeof(iProjectCount));
+      iFileHeader:= PChar(AllocMem(100 * sizeof(Char)));    // Allocating
+      iFileVersion:= PChar(AllocMem(100 * sizeof(Char)));   // Allocating
+      FileRead(iHandle, iFileHeader^, 100 * sizeof(Char));  // Reading header
+      FileRead(iHandle, iFileVersion^, 100 * sizeof(Char)); // Reading version
+      if (iFileHeader <> ORDESYNAME) or (iFileVersion <> ORDESYVERSION) then
+        raise Exception.Create('Incorrect project version! Need: ' + ORDESYNAME + ':' + ORDESYVERSION);
+      FreeMem(iFileHeader, 100 * sizeof(Char));  //
+      FreeMem(iFileVersion, 100 * sizeof(Char));
+      FileRead(iHandle, iProjectCount, sizeof(iProjectCount)); // PROJECT COUNT
       for iP:= 0 to iProjectCount - 1 do
       begin
-        iName:= PChar(AllocMem($1FF));
-        iDescription:= PChar(AllocMem($FFF));
+        // Id
         FileRead(iHandle, iId, sizeof(iId));
-        FileRead(iHandle, iName^, sizeof(iName));
-        FileRead(iHandle, iDescription^, SizeOf(iDescription));
-        FileRead(iHandle, iCreator^, SizeOf(iCreator));
+        // Name
+        //FileRead(iHandle, strLen, sizeof(strLen));        // Name length
+        //iName:= PChar(AllocMem(strLen * sizeof(Char)));   // Allocating memory
+        strLen:= 255;
+        FileRead(iHandle, iName^, strLen * sizeof(Char)); // Getting Name
+        // Desc
+        //FileRead(iHandle, strLen, sizeof(strLen));               // Desc length
+        //iDescription:= PChar(AllocMem(strLen * sizeof(Char)));   // Allocating memory
+        strLen:= 1000;
+        FileRead(iHandle, iDescription^, strLen * sizeof(Char)); // Getting Desc
+        // Creator
+        FileRead(iHandle, strLen, sizeof(strLen));           // Creator length
+        iCreator:= PChar(AllocMem(strLen * sizeof(Char)));   // Allocating memory
+        FileRead(iHandle, iCreator^, strLen * sizeof(Char)); // Getting creator
+        // Datecreate
         FileRead(iHandle, iDateCreate, SizeOf(iDateCreate));
         //
         iProject:= TORDESYProject.Create(iId, iName, iDescription, iCreator, iDateCreate);
         //
-        FileRead(iHandle, iModuleCount, sizeof(iModuleCount));
+        FileRead(iHandle, iModuleCount, sizeof(iModuleCount)); // MODULE COUNT
         for iM := 0 to iModuleCount - 1 do
         begin
-
+          // Id
+          FileRead(iHandle, iId, sizeof(iId));
+          // Name
+          FileRead(iHandle, strLen, sizeof(strLen));        // Name length
+          iName:= PChar(AllocMem(strLen * sizeof(Char)));   // Allocating memory
+          FileRead(iHandle, iName^, sizeof(iName));         // Getting Name
+          // Desc
+          FileRead(iHandle, strLen, sizeof(strLen));               // Desc length
+          iDescription:= PChar(AllocMem(strLen * sizeof(Char)));   // Allocating memory
+          FileRead(iHandle, iDescription^, SizeOf(iDescription));  // Getting Desc
         end;
         AddProject(iProject);
       end;
       Result:= true;
     finally
-      FreeMem(iFileHeader, $FF);
-      FreeMem(iFileVersion, $FF);
+      {FreeMem(iName, l2);
+      FreeMem(iDescription, l3);
+      FreeMem(iCreator, l2);}
       FileClose(iHandle);
     end;
   except
@@ -1203,9 +1228,9 @@ end;
 
 function TORDESYProjectList.SaveToFile(const aFileName: string): boolean;
 var
-  iP, iM: integer;
+  iP, iM, iB, iSc, iI, charSize, strSize: integer;
   iHandle: integer;
-  iProjectCount, iModuleCount: integer;
+  iProjectCount, iModuleCount, iBaseCount, iSchemeCount, iItemCount: integer;
   iProject: TORDESYProject;
   iModule: TORDESYModule;
   iBase: TOraBase;
@@ -1217,26 +1242,100 @@ begin
   try
     try
       iProjectCount:= Count;
+      charSize:= sizeof(Char);
       iHandle:= FileCreate(aFileName);
-      FileWrite(iHandle, 'ORDESY PROJECT', $FF);
-      FileWrite(iHandle, ORDESYVERSION, $FF);
+      //
+      FileWrite(iHandle, ORDESYNAME, length(ORDESYNAME) * charSize);
+      FileWrite(iHandle, ORDESYVERSION, Length(ORDESYVERSION) * charSize);
+      //--- PROJECTS
       FileWrite(iHandle, iProjectCount, sizeof(iProjectCount));
       for iP := 0 to iProjectCount - 1 do
       begin
         iProject:= FProjects[iP];
         FileWrite(iHandle, iProject.FId, sizeof(iProject.FId));
-        FileWrite(iHandle, iProject.FName[1], $1FF);
-        FileWrite(iHandle, iProject.FDescription[1], $FFF);
-        FileWrite(iHandle, iProject.FCreator[1], $1FF);
+        // Name
+        strSize:= Length(iProject.FName);
+        FileWrite(iHandle, strSize, sizeof(strSize)); // Name length
+        FileWrite(iHandle, iProject.FName[1], strSize * charSize); // Name
+        // Desc
+        strSize:= Length(iProject.FDescription);
+        FileWrite(iHandle, strSize, sizeof(strSize)); // Desc length
+        FileWrite(iHandle, iProject.FDescription[1], strSize * charSize); // Desc
+        // Creator
+        strSize:= Length(iProject.FCreator);
+        FileWrite(iHandle, strSize, sizeof(strSize)); // Creator length
+        FileWrite(iHandle, iProject.FCreator[1], strSize * charSize); // Creator
+        // Datecreate
         FileWrite(iHandle, iProject.FDateCreate, sizeof(iProject.FDateCreate));
+        //--- MODULES
         iModuleCount:= iProject.ModuleCount;
         FileWrite(iHandle, iModuleCount, sizeof(iModuleCount));
         for iM := 0 to iModuleCount - 1 do
         begin
           iModule:= iProject.GetModule(iM);
+          // Id
           FileWrite(iHandle, iModule.Id, sizeof(iModule.Id));
-          FileWrite(iHandle, iModule.Name[1], $1FF);
-          FileWrite(iHandle, iModule.Description[1], $FFF);
+          // Name
+          strSize:= Length(iModule.Name);
+          FileWrite(iHandle, strSize, sizeof(strSize)); // Name length
+          FileWrite(iHandle, iModule.Name[1], strSize * charSize); // Name
+          // Desc
+          strSize:= Length(iModule.Description);
+          FileWrite(iHandle, strSize, sizeof(strSize)); // Desc length
+          FileWrite(iHandle, iModule.Description[1], strSize * charSize); // Desc
+        end;
+        //--- BASES
+        iBaseCount:= iProject.OraBaseCount;
+        FileWrite(iHandle, iBaseCount, sizeof(iBaseCount));
+        for iB := 0 to iBaseCount - 1 do
+        begin
+          iBase:= iProject.GetOraBase(iB);
+          // Id
+          FileWrite(iHandle, iBase.Id, sizeof(iBase.Id));
+          // Name
+          strSize:= Length(iBase.Name);
+          FileWrite(iHandle, strSize, sizeof(strSize)); // Name length
+          FileWrite(iHandle, iBase.Name[1], strSize * charSize); // Name
+        end;
+        //--- SCHEMES
+        iSchemeCount:= iProject.OraBaseCount;
+        FileWrite(iHandle, iSchemeCount, sizeof(iSchemeCount));
+        for iSc := 0 to iBaseCount - 1 do
+        begin
+          iScheme:= iProject.GetOraScheme(iSc);
+          // Id
+          FileWrite(iHandle, iScheme.Id, sizeof(iScheme.Id));
+          // Login
+          strSize:= Length(iScheme.Login);
+          FileWrite(iHandle, strSize, sizeof(strSize)); // Login length
+          FileWrite(iHandle, iScheme.Login[1], strSize * charSize); // Login
+          // Pass
+          strSize:= Length(iScheme.Pass);
+          FileWrite(iHandle, strSize, sizeof(strSize)); // Pass length
+          FileWrite(iHandle, iScheme.Pass[1], strSize * charSize); // Pass
+          // ModuleId
+          FileWrite(iHandle, iScheme.ModuleId, sizeof(iScheme.ModuleId));
+          // ModuleId
+          FileWrite(iHandle, iScheme.BaseId, sizeof(iScheme.BaseId));
+        end;
+        //--- ITEMS
+        iItemCount:= iProject.OraItemCount;
+        FileWrite(iHandle, iItem, sizeof(iItemCount));
+        for iI := 0 to iItemCount - 1 do
+        begin
+          iItem:= iProject.GetOraItem(iI);
+          // Id
+          FileWrite(iHandle, iItem.Id, sizeof(iItem.Id));
+          // Name
+          strSize:= Length(iItem.Name);
+          FileWrite(iHandle, strSize, sizeof(strSize)); // Name length
+          FileWrite(iHandle, iItem.Name[1], strSize * charSize); // Name
+          // Type
+          FileWrite(iHandle, iItem.ItemType, sizeof(iItem.ItemType));
+          // Body
+          strSize:= Length(iItem.ItemBody);
+          FileWrite(iHandle, strSize, sizeof(strSize)); // Body length
+          FileWrite(iHandle, iItem.ItemBody[1], strSize * charSize); // Body
         end;
       end;
       FSaved:= true;

@@ -53,7 +53,6 @@ type
     miAbout: TMenuItem;
     miHelp: TMenuItem;
     splMain: TSplitter;
-    BitBtn1: TBitBtn;
     miBase: TMenuItem;
     miCreateBase: TMenuItem;
     miModule: TMenuItem;
@@ -99,12 +98,18 @@ begin
 end;
 
 procedure TfmMain.FreeApp;
+var
+  reply: word;
 begin
   try
     AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
     AppOptions.SetOption('GUI', 'FormLeft', inttostr(fmMain.Left));
     AppOptions.SetOption('GUI', 'FormTop', inttostr(fmMain.Top));
     AppOptions.SaveUserOptions();
+    reply:= MessageBox(handle, PChar('Some data were not retained, save?' + #13#10 +
+      'When refuse, all new data will be lost!'), PChar('Warning!'), 52);
+    if reply = IDYES then
+      ProjectList.SaveToFile();
     ProjectList.Free;
     {if not AppOptions.SaveUserOptions() then
       raise Exception.Create('Cant''t save user options!');}
@@ -132,6 +137,29 @@ begin
 end;
 
 procedure TfmMain.ViewProjects(aTreeView: TTreeView);
+
+  function GetBaseItem(const aProjectId, aModuleId, aBaseId: integer): TTreeNode;
+  var
+    i, ip1, ip2: integer;
+    Parent1, Parent2: TTreeNode;
+  begin
+    for i := 0 to aTreeView.Items.Count - 1 do
+    begin
+      if (TObject(aTreeView.Items[i].Data) is TORDESYProject) and (TORDESYProject(aTreeView.Items[i].Data).Id = aProjectId) then
+      begin
+        Parent1:= aTreeView.Items[i];
+        for ip1 := 0 to Parent1.Count - 1 do
+        begin
+
+        end;
+      end;
+      if TObject(aTreeView.Items[i].Data) is TOraBase then
+        if TOraBase(aTreeView.Items[i].Data).Id = aBaseId then
+          Result:= aTreeView.Items[i];
+    end;
+    Result:= nil;
+  end;
+
 var
   iPL, iM, iB, iSc, Ii: integer;
   iProject: TORDESYProject;
@@ -153,7 +181,31 @@ begin
     begin
       iModule:= iProject.GetModule(iM);
       ModuleAdded:= tvMain.Items.AddChildObject(ProjectAdded, iModule.Name, iModule);
-      for iB := 0 to iProject.OraBaseCount - 1 do
+      for iSc := 0 to iProject.OraSchemeCount - 1 do
+      begin
+        iScheme:= iProject.GetOraScheme(iSc);
+        if iScheme.ModuleId = iModule.Id then
+        begin
+          for iB := 0 to iProject.OraBaseCount - 1 do
+          begin
+            iBase:= iProject.GetOraBase(iB);
+            if iScheme.BaseId = iBase.Id then
+            begin
+              BaseAdded:= GetBaseItem(iProject.Id, iModule.Id, iBase.Id);
+              if not Assigned(BaseAdded) then
+                BaseAdded:= tvMain.Items.AddChildObject(ModuleAdded, iBase.Name, iBase);
+              SchemeAdded:= tvMain.Items.AddChildObject(BaseAdded, iScheme.Login, iScheme);
+            end;
+          end;
+          for Ii := 0 to iProject.OraItemCount - 1 do
+          begin
+            iItem:= iProject.GetOraItem(Ii);
+            ItemAdded:= tvMain.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
+          end;
+        end;
+      end;
+
+      {for iB := 0 to iProject.OraBaseCount - 1 do
       begin
         iBase:= iProject.GetOraBase(iB);
         BaseAdded:= tvMain.Items.AddChildObject(ModuleAdded, iBase.Name, iBase);
@@ -167,7 +219,7 @@ begin
             ItemAdded:= tvMain.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
           end;
         end;
-      end;
+      end;}
     end;
   end;
   aTreeView.Items.EndUpdate;
@@ -247,18 +299,22 @@ begin
       ProjectList:= TORDESYProjectList.Create;
     {ProjectList.OnProjectAdd:= ViewProjects(tvMain);
     ProjectList.OnProjectRemove:= ViewProjects(tvMain);}
-    if not ProjectList.LoadFromFile() then
-      raise Exception.Create('Error while loading project list. Please check the files/folders!');
+    //if not ProjectList.LoadFromFile() then
+    //  raise Exception.Create('Error while loading project list. Please check the files/folders!');
     //TEST
-    {iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'ORDESY PROJECT');
-    iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module'));
+    iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'ORDESY PROJECT');
+    iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module1', 'DESCRIPTION1'));
+    iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module2', 'DESCRIPTION2'));
+    iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module3', 'DESCRIPTION3'));
+    iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module4', 'DESCRIPTION4'));
     iProject.AddOraBase(TOraBase.Create(iProject.GetFreeBaseId, 'Some BASE'));
     iProject.AddOraScheme(TOraScheme.Create(iProject.GetFreeSchemeId, 'Scheme of SOME BASE', 'pass', iProject.GetFreeBaseId - 1, iProject.GetFreeModuleId - 1));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PROC_1', 'procedure', OraProcedure));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'FUNC_1', 'function', OraFunction));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PACK_1', 'package', OraPackage));
     ProjectList.AddProject(iProject);
-    ProjectList.SaveToFile();}
+    //ProjectList.SaveToFile();
+    ViewProjects(tvMain);
     //END TEST
   except
     on E: Exception do

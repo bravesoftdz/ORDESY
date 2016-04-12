@@ -97,16 +97,6 @@ object fmMain: TfmMain
       Height = 567
       Align = alClient
       TabOrder = 3
-      object BitBtn1: TBitBtn
-        Left = 6
-        Top = 528
-        Width = 75
-        Height = 25
-        Caption = 'BitBtn1'
-        DoubleBuffered = True
-        ParentDoubleBuffered = False
-        TabOrder = 0
-      end
     end
   end
   object mmMain: TMainMenu
