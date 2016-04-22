@@ -148,7 +148,7 @@ type
     FDescription: WideString;
     //FGroupId: integer;
   public
-    constructor Create(const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = ''; const aGroupId: integer = 0);
+    constructor Create(const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = '');
     property Id: integer read FId;
     property Name: string read FName write FName;
     property Description: widestring read FDescription write FDescription;
@@ -1117,9 +1117,9 @@ end;
 function TORDESYProjectList.LoadFromFile(const aFileName: string): boolean;
 var
   iHandle: integer;
-  iP, iM, iB, iSc, Ii, strLen: integer;
+  iP, iM, iB, iSc, Ii, charSize, strSize, NameSize, DescSize, CreatorSize: integer;
   iFileHeader, iFileVersion, iName, iDescription, iCreator: PChar;
-  iProjectCount, iModuleCount: integer;
+  iProjectCount, iModuleCount, iBaseCount, iSchemeCount, iItemCount: integer;
   iId: integer;
   iDateCreate: TDateTime;
   iProject: TORDESYProject;
@@ -1140,59 +1140,97 @@ begin
       iHandle:= FileOpen(aFileName, fmOpenRead);
       if iHandle = -1 then
         raise Exception.Create(SysErrorMessage(GetLastError));
-      iFileHeader:= PChar(AllocMem(100 * sizeof(Char)));    // Allocating
-      iFileVersion:= PChar(AllocMem(100 * sizeof(Char)));   // Allocating
-      FileRead(iHandle, iFileHeader^, 100 * sizeof(Char));  // Reading header
-      FileRead(iHandle, iFileVersion^, 100 * sizeof(Char)); // Reading version
+      charSize:= SizeOf(Char);
+      iFileHeader:= PChar(AllocMem(length(ORDESYNAME) * charSize + 1));       // Allocating
+      iFileVersion:= PChar(AllocMem(length(ORDESYVERSION) * charSize + 1));   // Allocating
+      FileRead(iHandle, iFileHeader^, length(ORDESYNAME) * charSize);     // Reading header
+      FileRead(iHandle, iFileVersion^, length(ORDESYVERSION) * charSize); // Reading version
+      //MessageBox(Application.Handle, iFileHeader, 'warning', 0);
       if (iFileHeader <> ORDESYNAME) or (iFileVersion <> ORDESYVERSION) then
         raise Exception.Create('Incorrect project version! Need: ' + ORDESYNAME + ':' + ORDESYVERSION);
-      FreeMem(iFileHeader, 100 * sizeof(Char));  //
-      FreeMem(iFileVersion, 100 * sizeof(Char));
+      FreeMem(iFileHeader, length(ORDESYNAME) * charSize + 1);  //
+      FreeMem(iFileVersion, length(ORDESYVERSION) * charSize + 1);
       FileRead(iHandle, iProjectCount, sizeof(iProjectCount)); // PROJECT COUNT
+      //MessageBox(Application.Handle, PChar(inttostr(iProjectCount)), 'warning', 0);
       for iP:= 0 to iProjectCount - 1 do
       begin
         // Id
         FileRead(iHandle, iId, sizeof(iId));
         // Name
-        //FileRead(iHandle, strLen, sizeof(strLen));        // Name length
-        //iName:= PChar(AllocMem(strLen * sizeof(Char)));   // Allocating memory
-        strLen:= 255;
-        FileRead(iHandle, iName^, strLen * sizeof(Char)); // Getting Name
+        FileRead(iHandle, strSize, sizeof(strSize));   // Name length
+        NameSize:= strSize;                            // Saving length to free memory
+        iName:= PChar(AllocMem(strSize * charSize + 1));   // Allocating memory
+        FileRead(iHandle, iName^, strSize * charSize); // Getting Name
+        //MessageBox(Application.Handle, iName, 'warning', 0);
         // Desc
-        //FileRead(iHandle, strLen, sizeof(strLen));               // Desc length
-        //iDescription:= PChar(AllocMem(strLen * sizeof(Char)));   // Allocating memory
-        strLen:= 1000;
-        FileRead(iHandle, iDescription^, strLen * sizeof(Char)); // Getting Desc
+        FileRead(iHandle, strSize, sizeof(strSize));          // Desc length
+        DescSize:= strSize;                                   // Saving length to free memory
+        iDescription:= PChar(AllocMem(strSize * charSize + 1));   // Allocating memory
+        FileRead(iHandle, iDescription^, strSize * charSize); // Getting Desc
+        //MessageBox(Application.Handle, iDescription, 'warning', 0);
         // Creator
-        FileRead(iHandle, strLen, sizeof(strLen));           // Creator length
-        iCreator:= PChar(AllocMem(strLen * sizeof(Char)));   // Allocating memory
-        FileRead(iHandle, iCreator^, strLen * sizeof(Char)); // Getting creator
+        FileRead(iHandle, strSize, sizeof(strSize));      // Creator length
+        CreatorSize:= strSize;                            // Saving length to free memory
+        iCreator:= PChar(AllocMem(strSize * charSize + 1));   // Allocating memory
+        FileRead(iHandle, iCreator^, strSize * charSize); // Getting creator
         // Datecreate
         FileRead(iHandle, iDateCreate, SizeOf(iDateCreate));
-        //
+        // Creating project
         iProject:= TORDESYProject.Create(iId, iName, iDescription, iCreator, iDateCreate);
-        //
+        // Free
+        FreeMem(iName, NameSize * charSize + 1);
+        FreeMem(iDescription, DescSize * charSize + 1);
+        FreeMem(iCreator, CreatorSize * charSize + 1);
+        //--- MODULES
         FileRead(iHandle, iModuleCount, sizeof(iModuleCount)); // MODULE COUNT
         for iM := 0 to iModuleCount - 1 do
         begin
           // Id
           FileRead(iHandle, iId, sizeof(iId));
           // Name
-          FileRead(iHandle, strLen, sizeof(strLen));        // Name length
-          iName:= PChar(AllocMem(strLen * sizeof(Char)));   // Allocating memory
-          FileRead(iHandle, iName^, sizeof(iName));         // Getting Name
+          FileRead(iHandle, strSize, sizeof(strSize)); // Name length
+          NameSize:= strSize;                          // Saving length to free memory
+          iName:= PChar(AllocMem(strSize * charSize + 1)); // Allocating memory
+          FileRead(iHandle, iName^, sizeof(iName));    // Getting Name
           // Desc
-          FileRead(iHandle, strLen, sizeof(strLen));               // Desc length
-          iDescription:= PChar(AllocMem(strLen * sizeof(Char)));   // Allocating memory
-          FileRead(iHandle, iDescription^, SizeOf(iDescription));  // Getting Desc
+          FileRead(iHandle, strSize, sizeof(strSize));            // Desc length
+          DescSize:= strSize;                                     // Saving length to free memory
+          iDescription:= PChar(AllocMem(strSize * charSize + 1));     // Allocating memory
+          FileRead(iHandle, iDescription^, SizeOf(iDescription)); // Getting Desc
+          // Adding
+          iProject.AddModule(TORDESYModule.Create(iId, iName, iDescription));
+          // Free
+          FreeMem(iName, NameSize * charSize + 1);
+          FreeMem(iDescription, DescSize * charSize + 1);
         end;
+        //--- BASES
+        FileRead(iHandle, iBaseCount, sizeof(iBaseCount)); // BASE COUNT
+        for iB := 0 to iBaseCount - 1 do
+        begin
+          // Id
+          FileRead(iHandle, iId, sizeof(iId));
+          // Name
+          FileRead(iHandle, strSize, sizeof(strSize)); // Name length
+          NameSize:= strSize;                          // Saving length to free memory
+          iName:= PChar(AllocMem(strSize * charSize + 1)); // Allocating memory
+          FileRead(iHandle, iName^, sizeof(iName));    // Getting Name
+          // Adding
+          iProject.AddOraBase(TOraBase.Create(iId, iName));
+          // Free
+          FreeMem(iName, NameSize * charSize);
+        end;
+        //--- SCHEMES
+        {FileRead(iHandle, iSchemeCount, sizeof(iSchemeCount)); // SCHEME COUNT
+        for iSc := 0 to iSchemeCount - 1 do
+        begin
+          // Id
+          FileRead(iHandle, iId, sizeof(iId));
+        end;}
+        // ADD PROJECT
         AddProject(iProject);
       end;
       Result:= true;
     finally
-      {FreeMem(iName, l2);
-      FreeMem(iDescription, l3);
-      FreeMem(iCreator, l2);}
       FileClose(iHandle);
     end;
   except
@@ -1357,7 +1395,7 @@ end;
 
 { TORDESYModule }
 
-constructor TORDESYModule.Create(const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = ''; const aGroupId: integer = 0);
+constructor TORDESYModule.Create(const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = '');
 begin
   inherited Create;
   FId:= aId;

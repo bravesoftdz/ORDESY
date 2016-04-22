@@ -143,21 +143,22 @@ procedure TfmMain.ViewProjects(aTreeView: TTreeView);
     i, ip1, ip2: integer;
     Parent1, Parent2: TTreeNode;
   begin
+    Result:= nil;
     for i := 0 to aTreeView.Items.Count - 1 do
     begin
       if (TObject(aTreeView.Items[i].Data) is TORDESYProject) and (TORDESYProject(aTreeView.Items[i].Data).Id = aProjectId) then
       begin
         Parent1:= aTreeView.Items[i];
         for ip1 := 0 to Parent1.Count - 1 do
-        begin
-
-        end;
+          if (TObject(Parent1.Item[ip1].Data) is TORDESYModule) and (TORDESYModule(Parent1.Item[ip1].Data).Id = aModuleId) then
+          begin
+            Parent2:= Parent1.Item[ip1];
+            for ip2 := 0 to Parent2.Count - 1 do
+              if (TObject(Parent2.Item[ip2].Data) is TOraBase) and (TOraBase(Parent2.Item[ip2].Data).Id = aBaseId) then
+                Result:= Parent2.Item[ip2];
+          end;
       end;
-      if TObject(aTreeView.Items[i].Data) is TOraBase then
-        if TOraBase(aTreeView.Items[i].Data).Id = aBaseId then
-          Result:= aTreeView.Items[i];
     end;
-    Result:= nil;
   end;
 
 var
@@ -299,10 +300,10 @@ begin
       ProjectList:= TORDESYProjectList.Create;
     {ProjectList.OnProjectAdd:= ViewProjects(tvMain);
     ProjectList.OnProjectRemove:= ViewProjects(tvMain);}
-    //if not ProjectList.LoadFromFile() then
-    //  raise Exception.Create('Error while loading project list. Please check the files/folders!');
+    if not ProjectList.LoadFromFile() then
+      raise Exception.Create('Error while loading project list. Please check the files/folders!');
     //TEST
-    iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'ORDESY PROJECT');
+    {iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'ORDESY PROJECT');
     iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module1', 'DESCRIPTION1'));
     iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module2', 'DESCRIPTION2'));
     iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module3', 'DESCRIPTION3'));
@@ -312,7 +313,7 @@ begin
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PROC_1', 'procedure', OraProcedure));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'FUNC_1', 'function', OraFunction));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PACK_1', 'package', OraPackage));
-    ProjectList.AddProject(iProject);
+    ProjectList.AddProject(iProject);}
     //ProjectList.SaveToFile();
     ViewProjects(tvMain);
     //END TEST
