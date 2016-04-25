@@ -59,6 +59,13 @@ type
     miBaseOptions: TMenuItem;
     miCreateModule: TMenuItem;
     miModuleOptions: TMenuItem;
+    ppmMain: TPopupMenu;
+    gbInfo: TGroupBox;
+    edName: TEdit;
+    lblName: TLabel;
+    lblDescription: TLabel;
+    mmDesc: TMemo;
+    miSavechanges: TMenuItem;
     procedure miExitClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
@@ -67,17 +74,21 @@ type
     procedure WMWindowPosChanged(var aMessage: TWMWindowPosChanged); message WM_WINDOWPOSCHANGED;
     procedure miCreateProjectClick(Sender: TObject);
     procedure ViewProjects(aTreeView: TTreeView);
+    procedure ppmMainPopup(Sender: TObject);
+    procedure EditProject(Sender: TObject);
+    procedure tvMainClick(Sender: TObject);
+    procedure miFileClick(Sender: TObject);
+    procedure miSavechangesClick(Sender: TObject);
   private
     AppOptions: TOptions;
     ProjectList: TORDESYProjectList;
-    //GroupList: TGroupList;
     procedure PrepareGUI;
     procedure UpdateGUI;
     procedure PrepareOptions;
     procedure PrepareProjects;
   public
     procedure InitApp;
-    procedure FreeApp;
+    procedure FreeApp(var Action: TCloseAction);
   end;
 
 var
@@ -87,9 +98,20 @@ implementation
 
 {$R *.dfm}
 
+procedure TfmMain.EditProject(Sender: TObject);
+var
+  Project: TORDESYProject;
+begin
+  Project:= TORDESYProject(tvMain.Selected.Data);
+  if ShowProjectEditDialog(Project) then
+  begin
+    //ProjectList.Saved:= false;
+  end;
+end;
+
 procedure TfmMain.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  FreeApp;
+  FreeApp(Action);
 end;
 
 procedure TfmMain.FormCreate(Sender: TObject);
@@ -97,7 +119,7 @@ begin
   InitApp;
 end;
 
-procedure TfmMain.FreeApp;
+procedure TfmMain.FreeApp(var Action: TCloseAction);
 var
   reply: word;
 begin
@@ -105,16 +127,31 @@ begin
     AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
     AppOptions.SetOption('GUI', 'FormLeft', inttostr(fmMain.Left));
     AppOptions.SetOption('GUI', 'FormTop', inttostr(fmMain.Top));
-    AppOptions.SaveUserOptions();
-    reply:= MessageBox(handle, PChar('Some data were not retained, save?' + #13#10 +
-      'When refuse, all new data will be lost!'), PChar('Warning!'), 52);
-    if reply = IDYES then
-      ProjectList.SaveToFile();
-    ProjectList.Free;
-    {if not AppOptions.SaveUserOptions() then
-      raise Exception.Create('Cant''t save user options!');}
-    //ProjectList.SaveToFile();
-    //GroupList.SaveGroups();
+    if not AppOptions.SaveUserOptions() then
+      raise Exception.Create('Cant''t save user options!');
+    if not ProjectList.Saved then
+    begin
+      reply:= MessageBox(handle, PChar('Some data were not retained, save?' + #13#10 +
+        'When refuse, all new data will be lost!'), PChar('Warning!'), 51);
+      if reply = IDYES then
+      begin
+        ProjectList.SaveToFile();
+        ProjectList.Free;
+        Action:= caFree;
+        Application.Terminate;
+      end;
+      if reply = IDCANCEL then
+      begin
+        Action:= caNone;
+        Exit;
+      end;
+      if reply = IDNO then
+      begin
+        ProjectList.Free;
+        Action:= caFree;
+        Application.Terminate;
+      end;
+    end;
   except
   on E: Exception do
     begin
@@ -126,7 +163,6 @@ begin
       {$ENDIF}
     end;
   end;
-  Application.Terminate;
 end;
 
 procedure TfmMain.InitApp;
@@ -239,13 +275,67 @@ begin
   fmMain.Close;
 end;
 
+procedure TfmMain.miFileClick(Sender: TObject);
+begin
+  miSavechanges.Visible:= false;
+  if Assigned(ProjectList) then
+    miSavechanges.Visible:= not ProjectList.Saved;
+end;
+
+procedure TfmMain.miSavechangesClick(Sender: TObject);
+begin
+  if Assigned(ProjectList) then
+    ProjectList.SaveToFile();
+end;
+
+procedure TfmMain.ppmMainPopup(Sender: TObject);
+var
+  i: integer;
+begin
+  for i := 0 to ppmMain.Items.Count - 1 do
+  begin
+    if Assigned(tvMain.Selected) and  (TObject(tvMain.Selected.Data) is TORDESYProject) then
+    begin
+      if (ppmMain.Items[i].Tag >= 1) and (ppmMain.Items[i].Tag <= 10) then
+        ppmMain.Items[i].Visible:= true
+    end
+      else
+        ppmMain.Items[i].Visible:= false;
+  end;
+end;
+
 procedure TfmMain.PrepareGUI;
+var
+  MenuItem: TMenuItem;
 begin
   try
     edtUserName.Text:= AppOptions.UserName;
     tvMain.Width:= strtoint(AppOptions.GetOption('GUI', 'GroupList'));
     fmMain.Width:= strtoint(AppOptions.GetOption('GUI', 'FormWidth'));
     fmMain.Height:= strtoint(AppOptions.GetOption('GUI', 'FormHeight'));
+    // Project Popup
+    MenuItem:= TMenuItem.Create(ppmMain);
+    MenuItem.OnClick:= miCreateProject.OnClick;
+    MenuItem.Caption:= 'Add project';
+    MenuItem.Tag:= 1;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
+    //
+    MenuItem:= TMenuItem.Create(ppmMain);
+    MenuItem.OnClick:= EditProject;
+    MenuItem.Caption:= 'Project options';
+    MenuItem.Tag:= 2;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
+    //
+    MenuItem:= TMenuItem.Create(ppmMain);
+    //MenuItem.OnClick:=
+    MenuItem.Caption:= 'Delete project';
+    MenuItem.Tag:= 3;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
+    // Module popup
+
   except
     on E: Exception do
     begin
@@ -287,19 +377,17 @@ end;
 
 procedure TfmMain.PrepareProjects;
 //TEST
-var
+{var
   iProject: TORDESYProject;
   iModule: TORDESYModule;
   iBase: TOraBase;
   iScheme: TOraScheme;
-  iItem: TOraItem;
+  iItem: TOraItem;}
 //END TEST
 begin
   try
     if not Assigned(ProjectList) then
       ProjectList:= TORDESYProjectList.Create;
-    {ProjectList.OnProjectAdd:= ViewProjects(tvMain);
-    ProjectList.OnProjectRemove:= ViewProjects(tvMain);}
     if not ProjectList.LoadFromFile() then
       raise Exception.Create('Error while loading project list. Please check the files/folders!');
     //TEST
@@ -314,9 +402,8 @@ begin
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'FUNC_1', 'function', OraFunction));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PACK_1', 'package', OraPackage));
     ProjectList.AddProject(iProject);}
-    //ProjectList.SaveToFile();
-    ViewProjects(tvMain);
     //END TEST
+    ViewProjects(tvMain);
   except
     on E: Exception do
     begin
@@ -333,6 +420,41 @@ end;
 procedure TfmMain.splMainMoved(Sender: TObject);
 begin
   AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
+end;
+
+procedure TfmMain.tvMainClick(Sender: TObject);
+begin
+  if Assigned(tvMain.Selected) then
+    if TObject(tvMain.Selected.Data) is TORDESYProject then
+    begin
+      edName.Text:= TORDESYProject(tvMain.Selected.Data).Name;
+      mmDesc.Text:= TORDESYProject(tvMain.Selected.Data).Description;
+    end
+    else if TObject(tvMain.Selected.Data) is TORDESYModule then
+    begin
+      edName.Text:= TORDESYModule(tvMain.Selected.Data).Name;
+      mmDesc.Text:= TORDESYModule(tvMain.Selected.Data).Description;
+    end
+    else if TObject(tvMain.Selected.Data) is TOraBase then
+    begin
+      edName.Text:= TOraBase(tvMain.Selected.Data).Name;
+      mmDesc.Text:= '';
+    end
+    else if TObject(tvMain.Selected.Data) is TOraScheme then
+    begin
+      edName.Text:= TOraScheme(tvMain.Selected.Data).Login;
+      mmDesc.Text:= '';
+    end
+    else if TObject(tvMain.Selected.Data) is TOraItem then
+    begin
+      edName.Text:= TOraItem(tvMain.Selected.Data).Name;
+      mmDesc.Text:= TOraItem(tvMain.Selected.Data).ItemBody;
+    end
+    else
+    begin
+      edName.Text:= '';
+      mmDesc.Text:= '';
+    end;
 end;
 
 procedure TfmMain.tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);

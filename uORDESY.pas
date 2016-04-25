@@ -33,7 +33,7 @@ type
   { TGroupItem
 
     Класс элемента группы }
-  TGroupItem = class
+  (*TGroupItem = class
   private
     FId: integer;        //Идентивикатор
     FName: string;       //Отображаемое имя в списке
@@ -77,47 +77,51 @@ type
     property FileName: string read FFileName write FFileName;
     property Loaded: boolean read FLoaded;
     property MaxGroupId: integer read GetMaxGroupId;
-  end;
+  end;*)
 
   TOraItem = class
   private
     FId : integer;
-    //FGroupId: integer;
     FSchemeId: integer;
     FType: TOraItemType;
     FName: string;
     FBody: WideString;
+    FOnChange: TNotifyEvent;
+    procedure SetName(const Value: string);
+    procedure SetType(const Value: TOraItemType);
+    procedure SetBody(const Value: widestring);
+    procedure SetSchemeId(const Value: integer);
     //FLastChange: TDatetime;
   public
-    constructor Create(const aId, aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aGroupId: integer = 0);
+    constructor Create(const aId, aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure);
     class function GetItemSqlType(const aType: TOraItemType): string;
     {function Wrap(var aProject: TORDESYProject):boolean;
     function Deploy(var aProject: TORDESYProject): boolean;
     function SaveToProject(var aProject: TORDESYProject): boolean;}
     property Id: integer read FId;
-    property Name: string read FName write FName;
-    property ItemType: TOraItemType read FType write FType;
-    property ItemBody: widestring read FBody write FBody;
-    property SchemeId: integer read FSchemeId write FSchemeId;
-    //property GroupId: integer read FGroupId write FGroupId;
+    property Name: string read FName write SetName;
+    property ItemType: TOraItemType read FType write SetType;
+    property ItemBody: widestring read FBody write SetBody;
+    property SchemeId: integer read FSchemeId write SetSchemeId;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
   end;
 
   TOraBase = class
   private
     FId: integer;
-    //FGroupId: integer;
     FName: string;
+    FOnChange: TNotifyEvent;
+    procedure SetName(const Value: string);
   public
     constructor Create(const aId: integer; const aName: string);
     property Id: integer read FId;
-    property Name: string read FName write FName;
-    //property GroupId: integer read FGroupId write FGroupId;
+    property Name: string read FName write SetName;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
   end;
 
   TOraScheme = class
   private
     FId: integer;
-    //FGroupId: integer;         //Идентификатор списка (тут будет и название)
     FBaseId: integer;
     FModuleId: integer;
     FLogin: string;
@@ -125,20 +129,25 @@ type
     FConnection: TConnection;
     FConnected: boolean;
     FValid: boolean;
+    FOnChange: TNotifyEvent;
+    procedure SetBaseId(const Value: integer);
+    procedure SetLogin(const Value: string);
+    procedure SetModuleId(const Value: integer);
+    procedure SetPass(const Value: string);
   public
-    constructor Create(const aId: integer; const aLogin, aPass: string; const aBaseId, aModuleId: integer; const aGroupId: integer = 0);
+    constructor Create(const aId: integer; const aLogin, aPass: string; const aBaseId, aModuleId: integer);
     destructor Destroy; override;
     procedure Connect(var aProject: TORDESYProject);
     procedure Disconnect;
     property Id: integer read FId;
-    property ModuleId: integer read FModuleId write FModuleId;
-    property BaseId: integer read FBaseId write FBaseId;
-    property Login: string read FLogin write FLogin;
-    property Pass: string read FPass write FPass;
-    //property GroupId: integer read FGroupId write FGroupId;
+    property ModuleId: integer read FModuleId write SetModuleId;
+    property BaseId: integer read FBaseId write SetBaseId;
+    property Login: string read FLogin write SetLogin;
+    property Pass: string read FPass write SetPass;
     property Connection: TConnection read FConnection write FConnection;
     property Connected: boolean read FConnected;
     property Valid: boolean read FValid;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
   end;
 
   TORDESYModule = class
@@ -146,13 +155,15 @@ type
     FId: integer;
     FName: string;
     FDescription: WideString;
-    //FGroupId: integer;
+    FOnChange: TNotifyEvent;
+    procedure SetDescription(const Value: widestring);
+    procedure SetName(const Value: string);
   public
     constructor Create(const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = '');
     property Id: integer read FId;
-    property Name: string read FName write FName;
-    property Description: widestring read FDescription write FDescription;
-    //property GroupId: integer read FGroupId write FGroupId;
+    property Name: string read FName write SetName;
+    property Description: widestring read FDescription write SetDescription;
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
   end;
 
   TORDESYProject = class
@@ -161,16 +172,17 @@ type
     FName: string;
     FDescription: string;
     FCreator: string;
-    //FGroupId: integer;
     FDateCreate: TDateTime;
     FORDESYModules: array of TORDESYModule;
     FOraBases: array of TOraBase;
     FOraSchemes: array of TOraScheme;
     FOraItems: array of TOraItem;
+    FOnChange: TNotifyEvent;
     function GetOraItemCount: integer;
     function GetModuleCount: integer;
     function GetOraBaseCount: integer;
     function GetOraSchemeCount: integer;
+    procedure SetName(const Value: string);
   public
     constructor Create(const aId: integer; const aName: string = 'New Project'; const aDescription: string = 'About new project...'; const aCreator: string = 'nobody'; const aDateCreate: TDateTime = 0);
     destructor Destroy; override;
@@ -195,18 +207,20 @@ type
     function GetModule(const aIndex: integer): TORDESYModule;
     function GetModuleName(const aIndex: integer): string;
     // WRAP DEPLOY!
-    procedure WrapItem(const aSchemeId: integer; const aName: string; const aType: TOraItemType; const aGroupId: integer);
+    procedure WrapItem(const aSchemeId: integer; const aName: string; const aType: TOraItemType);
     procedure DeployItem(const aItemId: integer);
 
     property Id: integer read FId;
     property Creator: string read FCreator write FCreator;
-    property Name: string read FName write FName;
-    //property GroupId: integer read FGroupId write FGroupId;
+    property Name: string read FName write SetName;
+    property Description: string read FDescription write FDescription;
     //
     property ModuleCount: integer read GetModuleCount;
     property OraBaseCount: integer read GetOraBaseCount;
     property OraSchemeCount: integer read GetOraSchemeCount;
     property OraItemCount: integer read GetOraItemCount;
+    //
+    property OnChange: TNotifyEvent read FOnChange write FOnChange;
   end;
 
   TORDESYProjectList = class
@@ -217,6 +231,7 @@ type
     FOnProjectRemove: TNotifyEvent;
     procedure Clear;
     function GetProjectsCount: integer;
+    procedure OnChange(Sender: TObject);
   public
     constructor Create;
     procedure AddProject(aProject: TORDESYProject);
@@ -237,7 +252,7 @@ implementation
 
 { TDBItem }
 
-constructor TOraItem.Create(const aId, aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aGroupId: integer = 0);
+constructor TOraItem.Create(const aId, aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure);
 begin
   inherited Create;
   FId:= aId;
@@ -245,7 +260,6 @@ begin
   FName:= aName;
   FBody:= aBody;
   FSchemeId:= aSchemeId;
-  //FGroupId:= aGroupId;
 end;
 
 { TORDESYProject }
@@ -287,6 +301,8 @@ begin
   end;
   SetLength(FOraItems, length(FOraItems) + 1);
   FOraItems[high(FOraItems)]:= aItem;
+  FOraItems[high(FOraItems)].OnChange:= OnChange;
+  OnChange(Self);
 end;
 
 procedure TORDESYProject.AddOraScheme(aScheme: TOraScheme);
@@ -310,7 +326,7 @@ begin
   FDescription:= aDescription;
   FCreator:= aCreator;
   if aDateCreate = 0 then
-    FDateCreate:= Time
+    FDateCreate:= Date + Time
   else
     FDateCreate:= aDateCreate;
 end;
@@ -539,8 +555,14 @@ begin
       Result:= FOraSchemes[i].Login;
 end;
 
+procedure TORDESYProject.SetName(const Value: string);
+begin
+  FName := Value;
+  OnChange(Self);
+end;
+
 procedure TORDESYProject.WrapItem(const aSchemeId: integer; const aName: string;
-  const aType: TOraItemType; const aGroupId: integer);
+  const aType: TOraItemType);
 var
   iModule: TORDESYModule;
   iBase: TOraBase;
@@ -566,7 +588,7 @@ begin
         'order by line';
       Query.Active:= true;
       firstItem:= true;
-      iItem:= TOraItem.Create(GetFreeItemId ,aSchemeId, aName, '', aType, aGroupId);
+      iItem:= TOraItem.Create(GetFreeItemId ,aSchemeId, aName, '', aType);
       while not Query.Eof do
       begin
         if firstItem then
@@ -591,7 +613,7 @@ end;
 
 { TGroupItem }
 
-constructor TGroupItem.Create(const aName: string; const aId,
+(*constructor TGroupItem.Create(const aName: string; const aId,
   aParentId: integer; aExpanded: boolean);
 begin
   inherited Create;
@@ -879,7 +901,7 @@ begin
   finally
     CloseFile(gFile);
   end;
-end;
+end;*)
 
 { TOraScheme }
 
@@ -909,7 +931,7 @@ begin
   end;
 end;
 
-constructor TOraScheme.Create(const aId: integer; const aLogin, aPass: string; const aBaseId, aModuleId: integer; const aGroupId: integer = 0);
+constructor TOraScheme.Create(const aId: integer; const aLogin, aPass: string; const aBaseId, aModuleId: integer);
 begin
   inherited Create;
   FId:= aId;
@@ -917,7 +939,6 @@ begin
   FPass:= aPass;
   FBaseId:= aBaseId;
   FModuleId:= aModuleId;
-  //FGroupId:= aGroupId;
 end;
 
 destructor TOraScheme.Destroy;
@@ -935,6 +956,30 @@ begin
   if Assigned(FConnection) and (FConnected) then
     FConnection.Disconnect;
   FConnected:= FConnection.Connected;
+end;
+
+procedure TOraScheme.SetBaseId(const Value: integer);
+begin
+  FBaseId := Value;
+  OnChange(Self);
+end;
+
+procedure TOraScheme.SetLogin(const Value: string);
+begin
+  FLogin := Value;
+  OnChange(Self);
+end;
+
+procedure TOraScheme.SetModuleId(const Value: integer);
+begin
+  FModuleId := Value;
+  OnChange(Self);
+end;
+
+procedure TOraScheme.SetPass(const Value: string);
+begin
+  FPass := Value;
+  OnChange(Self);
 end;
 
 { TOraBase }
@@ -959,6 +1004,30 @@ begin
     OraPackage: Result:= 'PACKAGE'
   else Result:= 'PROCEDURE';
   end;
+end;
+
+procedure TOraItem.SetBody(const Value: widestring);
+begin
+  FBody := Value;
+  OnChange(Self);
+end;
+
+procedure TOraItem.SetName(const Value: string);
+begin
+  FName := Value;
+  OnChange(Self);
+end;
+
+procedure TOraItem.SetSchemeId(const Value: integer);
+begin
+  FSchemeId := Value;
+  OnChange(Self);
+end;
+
+procedure TOraItem.SetType(const Value: TOraItemType);
+begin
+  FType := Value;
+  OnChange(Self);
 end;
 
 (*function TOraItem.SaveToProject(var aProject: TORDESYProject): boolean;
@@ -1040,6 +1109,12 @@ begin
   end;
 end;*)
 
+procedure TOraBase.SetName(const Value: string);
+begin
+  FName := Value;
+  OnChange(Self);
+end;
+
 { TORDESYProjectList }
 
 procedure TORDESYProjectList.AddProject(aProject: TORDESYProject);
@@ -1053,6 +1128,7 @@ begin
   end;
   SetLength(FProjects, length(FProjects) + 1);
   FProjects[high(FProjects)]:= aProject;
+  FSaved:= false;
   if Assigned(FOnProjectAdd) then
     FOnProjectAdd(Self);
 end;
@@ -1117,10 +1193,14 @@ end;
 function TORDESYProjectList.LoadFromFile(const aFileName: string): boolean;
 var
   iHandle: integer;
-  iP, iM, iB, iSc, Ii, charSize, strSize, NameSize, DescSize, CreatorSize: integer;
-  iFileHeader, iFileVersion, iName, iDescription, iCreator: PChar;
+  iP, iM, iB, iSc, Ii, iId, ModuleId, BaseId, SchemeId,
+  charSize, strSize, NameSize, DescSize, CreatorSize, BodySize,
+  LoginSize, PassSize,
   iProjectCount, iModuleCount, iBaseCount, iSchemeCount, iItemCount: integer;
-  iId: integer;
+  iItemType: TOraItemType;
+  iFileHeader, iFileVersion,
+  iName, iDescription, iCreator,
+  iLogin, iPass, iBody: PChar;
   iDateCreate: TDateTime;
   iProject: TORDESYProject;
   iModule: TORDESYModule;
@@ -1145,13 +1225,11 @@ begin
       iFileVersion:= PChar(AllocMem(length(ORDESYVERSION) * charSize + 1));   // Allocating
       FileRead(iHandle, iFileHeader^, length(ORDESYNAME) * charSize);     // Reading header
       FileRead(iHandle, iFileVersion^, length(ORDESYVERSION) * charSize); // Reading version
-      //MessageBox(Application.Handle, iFileHeader, 'warning', 0);
       if (iFileHeader <> ORDESYNAME) or (iFileVersion <> ORDESYVERSION) then
-        raise Exception.Create('Incorrect project version! Need: ' + ORDESYNAME + ':' + ORDESYVERSION);
+        raise Exception.Create('Incorrect project version! Need: ' + ORDESYNAME + ' ' + ORDESYVERSION);
       FreeMem(iFileHeader, length(ORDESYNAME) * charSize + 1);  //
       FreeMem(iFileVersion, length(ORDESYVERSION) * charSize + 1);
       FileRead(iHandle, iProjectCount, sizeof(iProjectCount)); // PROJECT COUNT
-      //MessageBox(Application.Handle, PChar(inttostr(iProjectCount)), 'warning', 0);
       for iP:= 0 to iProjectCount - 1 do
       begin
         // Id
@@ -1161,13 +1239,11 @@ begin
         NameSize:= strSize;                            // Saving length to free memory
         iName:= PChar(AllocMem(strSize * charSize + 1));   // Allocating memory
         FileRead(iHandle, iName^, strSize * charSize); // Getting Name
-        //MessageBox(Application.Handle, iName, 'warning', 0);
         // Desc
         FileRead(iHandle, strSize, sizeof(strSize));          // Desc length
         DescSize:= strSize;                                   // Saving length to free memory
         iDescription:= PChar(AllocMem(strSize * charSize + 1));   // Allocating memory
         FileRead(iHandle, iDescription^, strSize * charSize); // Getting Desc
-        //MessageBox(Application.Handle, iDescription, 'warning', 0);
         // Creator
         FileRead(iHandle, strSize, sizeof(strSize));      // Creator length
         CreatorSize:= strSize;                            // Saving length to free memory
@@ -1177,6 +1253,9 @@ begin
         FileRead(iHandle, iDateCreate, SizeOf(iDateCreate));
         // Creating project
         iProject:= TORDESYProject.Create(iId, iName, iDescription, iCreator, iDateCreate);
+        iProject.OnChange:= OnChange;
+        //
+        //MessageBox(Application.Handle, PChar(FormatDateTime('c', iDateCreate)), PChar('warning'), 0);
         // Free
         FreeMem(iName, NameSize * charSize + 1);
         FreeMem(iDescription, DescSize * charSize + 1);
@@ -1191,12 +1270,12 @@ begin
           FileRead(iHandle, strSize, sizeof(strSize)); // Name length
           NameSize:= strSize;                          // Saving length to free memory
           iName:= PChar(AllocMem(strSize * charSize + 1)); // Allocating memory
-          FileRead(iHandle, iName^, sizeof(iName));    // Getting Name
+          FileRead(iHandle, iName^, strSize * charSize + 1);    // Getting Name
           // Desc
           FileRead(iHandle, strSize, sizeof(strSize));            // Desc length
           DescSize:= strSize;                                     // Saving length to free memory
           iDescription:= PChar(AllocMem(strSize * charSize + 1));     // Allocating memory
-          FileRead(iHandle, iDescription^, SizeOf(iDescription)); // Getting Desc
+          FileRead(iHandle, iDescription^, strSize * charSize + 1); // Getting Desc
           // Adding
           iProject.AddModule(TORDESYModule.Create(iId, iName, iDescription));
           // Free
@@ -1213,22 +1292,68 @@ begin
           FileRead(iHandle, strSize, sizeof(strSize)); // Name length
           NameSize:= strSize;                          // Saving length to free memory
           iName:= PChar(AllocMem(strSize * charSize + 1)); // Allocating memory
-          FileRead(iHandle, iName^, sizeof(iName));    // Getting Name
+          FileRead(iHandle, iName^, strSize * charSize + 1);    // Getting Name
           // Adding
           iProject.AddOraBase(TOraBase.Create(iId, iName));
           // Free
-          FreeMem(iName, NameSize * charSize);
+          FreeMem(iName, NameSize * charSize + 1);
         end;
         //--- SCHEMES
-        {FileRead(iHandle, iSchemeCount, sizeof(iSchemeCount)); // SCHEME COUNT
+        FileRead(iHandle, iSchemeCount, sizeof(iSchemeCount)); // SCHEME COUNT
         for iSc := 0 to iSchemeCount - 1 do
         begin
           // Id
           FileRead(iHandle, iId, sizeof(iId));
-        end;}
+          // Login
+          FileRead(iHandle, strSize, sizeof(strSize));        // Login length
+          LoginSize:= strSize;                                // Saving length to free memory
+          iLogin:= PChar(AllocMem(strSize * charSize + 1));   // Allocating memory
+          FileRead(iHandle, iLogin^, strSize * charSize + 1); // Getting Login
+          // Pass
+          FileRead(iHandle, strSize, sizeof(strSize));       // Pass length
+          PassSize:= strSize;                                // Saving length to free memory
+          iPass:= PChar(AllocMem(strSize * charSize + 1));   // Allocating memory
+          FileRead(iHandle, iPass^, strSize * charSize + 1); // Getting Login
+          // ModuleId
+          FileRead(iHandle, ModuleId, sizeof(ModuleId));
+          // BaseId
+          FileRead(iHandle, BaseId, sizeof(BaseId));
+          // Adding
+          iProject.AddOraScheme(TOraScheme.Create(iId, iLogin, iPass, BaseId, ModuleId));
+          // Free
+          FreeMem(iLogin, LoginSize * charSize + 1);
+          FreeMem(iPass, PassSize * charSize + 1);
+        end;
+        //--- ITEMS
+        FileRead(iHandle, iItemCount, sizeof(iItemCount)); // ITEM COUNT
+        for Ii := 0 to iItemCount - 1 do
+        begin
+          // Id
+          FileRead(iHandle, iId, sizeof(iId));
+          // ShemeId
+          FileRead(iHandle, SchemeId, sizeof(SchemeId));
+          // Name
+          FileRead(iHandle, strSize, sizeof(strSize));       // Name length
+          NameSize:= strSize;                                // Saving length to free memory
+          iName:= PChar(AllocMem(strSize * charSize + 1));   // Allocating memory
+          FileRead(iHandle, iName^, strSize * charSize + 1); // Getting Name
+          // Type
+          FileRead(iHandle, iItemType, sizeof(iItemType));
+          // Body
+          FileRead(iHandle, strSize, sizeof(strSize));       // Body length
+          BodySize:= strSize;                                // Saving length to free memory
+          iBody:= PChar(AllocMem(strSize * charSize + 1));   // Allocating memory
+          FileRead(iHandle, iBody^, strSize * charSize + 1); // Getting Name
+          // Adding
+          iProject.AddOraItem(TOraItem.Create(iId, SchemeId, iName, iBody, iItemType));
+          // Free
+          FreeMem(iName, NameSize * charSize + 1);
+          FreeMem(iBody, BodySize * charSize + 1);
+        end;
         // ADD PROJECT
         AddProject(iProject);
       end;
+      FSaved:= true;
       Result:= true;
     finally
       FileClose(iHandle);
@@ -1246,6 +1371,11 @@ begin
   end;
 end;
 
+procedure TORDESYProjectList.OnChange(Sender: TObject);
+begin
+  FSaved:= false;
+end;
+
 procedure TORDESYProjectList.RemoveProject(const aIndex: integer);
 var
   i: integer;
@@ -1258,6 +1388,7 @@ begin
       LastItem:= FProjects[high(FProjects)];
       FProjects[i]:= LastItem;
       SetLength(FProjects, length(FProjects) - 1);
+      FSaved:= false;
       if Assigned(FOnProjectRemove) then
         FOnProjectRemove(Self);
     end;
@@ -1266,7 +1397,7 @@ end;
 
 function TORDESYProjectList.SaveToFile(const aFileName: string): boolean;
 var
-  iP, iM, iB, iSc, iI, charSize, strSize: integer;
+  iP, iM, iB, iSc, iI, charSize, strSize, i: integer;
   iHandle: integer;
   iProjectCount, iModuleCount, iBaseCount, iSchemeCount, iItemCount: integer;
   iProject: TORDESYProject;
@@ -1274,6 +1405,7 @@ var
   iBase: TOraBase;
   iScheme: TOraScheme;
   iItem: TOraItem;
+  Buffer: PChar;
 begin
   Result:= false;
   FSaved:= false;
@@ -1316,11 +1448,11 @@ begin
           // Name
           strSize:= Length(iModule.Name);
           FileWrite(iHandle, strSize, sizeof(strSize)); // Name length
-          FileWrite(iHandle, iModule.Name[1], strSize * charSize); // Name
+          FileWrite(iHandle, iModule.Name[1], strSize * charSize + 1); // Name
           // Desc
           strSize:= Length(iModule.Description);
           FileWrite(iHandle, strSize, sizeof(strSize)); // Desc length
-          FileWrite(iHandle, iModule.Description[1], strSize * charSize); // Desc
+          FileWrite(iHandle, iModule.Description[1], strSize * charSize + 1); // Desc
         end;
         //--- BASES
         iBaseCount:= iProject.OraBaseCount;
@@ -1333,7 +1465,7 @@ begin
           // Name
           strSize:= Length(iBase.Name);
           FileWrite(iHandle, strSize, sizeof(strSize)); // Name length
-          FileWrite(iHandle, iBase.Name[1], strSize * charSize); // Name
+          FileWrite(iHandle, iBase.Name[1], strSize * charSize + 1); // Name
         end;
         //--- SCHEMES
         iSchemeCount:= iProject.OraBaseCount;
@@ -1346,14 +1478,14 @@ begin
           // Login
           strSize:= Length(iScheme.Login);
           FileWrite(iHandle, strSize, sizeof(strSize)); // Login length
-          FileWrite(iHandle, iScheme.Login[1], strSize * charSize); // Login
+          FileWrite(iHandle, iScheme.Login[1], strSize * charSize + 1); // Login
           // Pass
           strSize:= Length(iScheme.Pass);
           FileWrite(iHandle, strSize, sizeof(strSize)); // Pass length
-          FileWrite(iHandle, iScheme.Pass[1], strSize * charSize); // Pass
+          FileWrite(iHandle, iScheme.Pass[1], strSize * charSize + 1); // Pass
           // ModuleId
           FileWrite(iHandle, iScheme.ModuleId, sizeof(iScheme.ModuleId));
-          // ModuleId
+          // BaseId
           FileWrite(iHandle, iScheme.BaseId, sizeof(iScheme.BaseId));
         end;
         //--- ITEMS
@@ -1364,19 +1496,22 @@ begin
           iItem:= iProject.GetOraItem(iI);
           // Id
           FileWrite(iHandle, iItem.Id, sizeof(iItem.Id));
+          // SchemeId
+          FileWrite(iHandle, iItem.SchemeId, sizeof(iItem.SchemeId));
           // Name
           strSize:= Length(iItem.Name);
           FileWrite(iHandle, strSize, sizeof(strSize)); // Name length
-          FileWrite(iHandle, iItem.Name[1], strSize * charSize); // Name
+          FileWrite(iHandle, iItem.Name[1], strSize * charSize + 1); // Name
           // Type
           FileWrite(iHandle, iItem.ItemType, sizeof(iItem.ItemType));
           // Body
           strSize:= Length(iItem.ItemBody);
           FileWrite(iHandle, strSize, sizeof(strSize)); // Body length
-          FileWrite(iHandle, iItem.ItemBody[1], strSize * charSize); // Body
+          FileWrite(iHandle, iItem.ItemBody[1], strSize * charSize + 1); // Body
         end;
       end;
       FSaved:= true;
+      Result:= true;
     finally
       FileClose(iHandle);
     end;
@@ -1401,7 +1536,18 @@ begin
   FId:= aId;
   FName:= aName;
   FDescription:= aDescription;
-  //FGroupId:= aGroupId;
+end;
+
+procedure TORDESYModule.SetDescription(const Value: widestring);
+begin
+  FDescription := Value;
+  OnChange(Self);
+end;
+
+procedure TORDESYModule.SetName(const Value: string);
+begin
+  FName := Value;
+  OnChange(Self);
 end;
 
 end.

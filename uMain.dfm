@@ -2,8 +2,8 @@ object fmMain: TfmMain
   Left = 0
   Top = 0
   Caption = 'OrDeSy'
-  ClientHeight = 644
-  ClientWidth = 822
+  ClientHeight = 526
+  ClientWidth = 701
   Color = clBtnFace
   Font.Charset = RUSSIAN_CHARSET
   Font.Color = clWindowText
@@ -20,48 +20,59 @@ object fmMain: TfmMain
   object pnlMain: TPanel
     Left = 0
     Top = 0
-    Width = 822
-    Height = 644
+    Width = 701
+    Height = 526
     Align = alClient
     BevelOuter = bvNone
     DoubleBuffered = False
     ParentDoubleBuffered = False
     TabOrder = 0
+    ExplicitWidth = 822
+    ExplicitHeight = 663
     object splMain: TSplitter
       Left = 281
       Top = 41
-      Height = 567
+      Height = 449
       Color = clWhite
       ParentColor = False
       OnMoved = splMainMoved
+      ExplicitHeight = 567
     end
     object tvMain: TTreeView
       Left = 0
       Top = 41
       Width = 281
-      Height = 567
+      Height = 449
       Align = alLeft
       Images = imlMain
       Indent = 19
+      PopupMenu = ppmMain
+      ReadOnly = True
+      SortType = stText
       TabOrder = 0
+      OnClick = tvMainClick
       OnGetImageIndex = tvMainGetImageIndex
       OnGetSelectedIndex = tvMainGetImageIndex
+      ExplicitHeight = 586
     end
     object pnlTop: TPanel
       Left = 0
       Top = 0
-      Width = 822
+      Width = 701
       Height = 41
       Align = alTop
       TabOrder = 1
+      ExplicitWidth = 822
     end
     object pnlBottom: TPanel
       Left = 0
-      Top = 608
-      Width = 822
+      Top = 490
+      Width = 701
       Height = 36
       Align = alBottom
       TabOrder = 2
+      ExplicitTop = 627
+      ExplicitWidth = 822
       object lblUserName: TLabel
         Left = 7
         Top = 9
@@ -93,10 +104,65 @@ object fmMain: TfmMain
     object pnlClient: TPanel
       Left = 284
       Top = 41
-      Width = 538
-      Height = 567
+      Width = 417
+      Height = 449
       Align = alClient
       TabOrder = 3
+      ExplicitWidth = 538
+      ExplicitHeight = 586
+      object gbInfo: TGroupBox
+        Left = 1
+        Top = 1
+        Width = 415
+        Height = 447
+        Align = alClient
+        Caption = 'Info:'
+        TabOrder = 0
+        ExplicitWidth = 536
+        ExplicitHeight = 40
+        DesignSize = (
+          415
+          447)
+        object lblName: TLabel
+          Left = 10
+          Top = 25
+          Width = 30
+          Height = 13
+          Caption = 'Name:'
+        end
+        object lblDescription: TLabel
+          Left = 10
+          Top = 55
+          Width = 72
+          Height = 13
+          Caption = 'Description:'
+        end
+        object edName: TEdit
+          Left = 88
+          Top = 20
+          Width = 315
+          Height = 26
+          Align = alCustom
+          Anchors = [akLeft, akTop, akRight]
+          Font.Charset = RUSSIAN_CHARSET
+          Font.Color = clWindowText
+          Font.Height = -13
+          Font.Name = 'Consolas'
+          Font.Style = []
+          ParentFont = False
+          ReadOnly = True
+          TabOrder = 0
+        end
+        object mmDesc: TMemo
+          Left = 88
+          Top = 52
+          Width = 315
+          Height = 237
+          Anchors = [akLeft, akTop, akRight]
+          ScrollBars = ssBoth
+          TabOrder = 1
+        end
+      end
     end
   end
   object mmMain: TMainMenu
@@ -104,6 +170,11 @@ object fmMain: TfmMain
     Top = 40
     object miFile: TMenuItem
       Caption = 'File'
+      OnClick = miFileClick
+      object miSavechanges: TMenuItem
+        Caption = 'Save changes'
+        OnClick = miSavechangesClick
+      end
       object miOptions: TMenuItem
         Caption = 'Options'
       end
@@ -2428,5 +2499,10 @@ object fmMain: TfmMain
       F81FFFFFFFFFF81FFC3FFFFFFFFFFC3FFC3FFFFFFFFFFC3FF81F93FFC7FFF81F
       F18F01FF83FFF18FE3C701FF01FFE3C7E7E783FF01FFE7E7FFFF01FF01FFFFFF
       FFFF01FF83FFFFFFFFFF93FFC7FFFFFF}
+  end
+  object ppmMain: TPopupMenu
+    OnPopup = ppmMainPopup
+    Left = 16
+    Top = 88
   end
 end

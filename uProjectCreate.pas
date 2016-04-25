@@ -22,6 +22,7 @@ type
   end;
 
 function ShowProjectCreateDialog(const aCreator: string; var aProjectList: TORDESYProjectList): boolean;
+function ShowProjectEditDialog(var aProject: TORDESYProject): boolean;
 
 implementation
 
@@ -40,6 +41,32 @@ begin
         if (length(mmDescription.Text) > 1000) then
           raise Exception.Create('Incorrect project description, more than 1000 characters!');
         aProjectList.AddProject(TORDESYProject.Create(aProjectList.GetFreeProjectId, edtProjectName.Text, mmDescription.Text, lblCreator.Caption));
+        Result:= true;
+      end;
+    finally
+      Free;
+    end;
+end;
+
+function ShowProjectEditDialog(var aProject: TORDESYProject): boolean;
+begin
+  with TfmProjectCreate.Create(Application) do
+    try
+      Result:= false;
+      Caption:= 'Edit project';
+      edtProjectName.Text:= aProject.Name;
+      mmDescription.Text:= aProject.Description;
+      lblCreator.Caption:= aProject.Creator;
+      btnCreate.Caption:= 'Save';
+      if ShowModal = mrOk then
+      begin
+        if (edtProjectName.Text = '') or (length(edtProjectName.Text) > 255) then
+          raise Exception.Create('Incorrect project name, empty or more than 255 characters!');
+        if (length(mmDescription.Text) > 1000) then
+          raise Exception.Create('Incorrect project description, more than 1000 characters!');
+        aProject.Name:= edtProjectName.Text;
+        aProject.Description:= mmDescription.Text;
+        aProject.Creator:= lblCreator.Caption;
         Result:= true;
       end;
     finally
