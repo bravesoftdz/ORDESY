@@ -216,16 +216,16 @@ begin
     ProjectAdded:= tvMain.Items.AddObject(nil, iProject.Name, iProject);
     for iM := 0 to iProject.ModuleCount - 1 do
     begin
-      iModule:= iProject.GetModule(iM);
+      iModule:= iProject.GetModuleByIndex(iM);
       ModuleAdded:= tvMain.Items.AddChildObject(ProjectAdded, iModule.Name, iModule);
       for iSc := 0 to iProject.OraSchemeCount - 1 do
       begin
-        iScheme:= iProject.GetOraScheme(iSc);
+        iScheme:= iProject.GetOraSchemeByIndex(iSc);
         if iScheme.ModuleId = iModule.Id then
         begin
           for iB := 0 to iProject.OraBaseCount - 1 do
           begin
-            iBase:= iProject.GetOraBase(iB);
+            iBase:= iProject.GetOraBaseByIndex(iB);
             if iScheme.BaseId = iBase.Id then
             begin
               BaseAdded:= GetBaseItem(iProject.Id, iModule.Id, iBase.Id);
@@ -236,27 +236,11 @@ begin
           end;
           for Ii := 0 to iProject.OraItemCount - 1 do
           begin
-            iItem:= iProject.GetOraItem(Ii);
+            iItem:= iProject.GetOraItemByIndex(Ii);
             ItemAdded:= tvMain.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
           end;
         end;
       end;
-
-      {for iB := 0 to iProject.OraBaseCount - 1 do
-      begin
-        iBase:= iProject.GetOraBase(iB);
-        BaseAdded:= tvMain.Items.AddChildObject(ModuleAdded, iBase.Name, iBase);
-        for iSc := 0 to iProject.OraSchemeCount - 1 do
-        begin
-          iScheme:= iProject.GetOraScheme(iSc);
-          SchemeAdded:= tvMain.Items.AddChildObject(BaseAdded, iScheme.Login, iScheme);
-          for Ii := 0 to iProject.OraItemCount - 1 do
-          begin
-            iItem:= iProject.GetOraItem(Ii);
-            ItemAdded:= tvMain.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
-          end;
-        end;
-      end;}
     end;
   end;
   aTreeView.Items.EndUpdate;
@@ -377,12 +361,12 @@ end;
 
 procedure TfmMain.PrepareProjects;
 //TEST
-{var
+var
   iProject: TORDESYProject;
   iModule: TORDESYModule;
   iBase: TOraBase;
   iScheme: TOraScheme;
-  iItem: TOraItem;}
+  iItem: TOraItem;
 //END TEST
 begin
   try
@@ -391,7 +375,7 @@ begin
     if not ProjectList.LoadFromFile() then
       raise Exception.Create('Error while loading project list. Please check the files/folders!');
     //TEST
-    {iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'ORDESY PROJECT');
+    {iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'BIG PROJECT');
     iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module1', 'DESCRIPTION1'));
     iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module2', 'DESCRIPTION2'));
     iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module3', 'DESCRIPTION3'));
