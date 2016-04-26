@@ -2,9 +2,11 @@ object fmMain: TfmMain
   Left = 0
   Top = 0
   Caption = 'OrDeSy'
-  ClientHeight = 526
-  ClientWidth = 701
+  ClientHeight = 424
+  ClientWidth = 552
   Color = clBtnFace
+  Constraints.MinHeight = 470
+  Constraints.MinWidth = 560
   Font.Charset = RUSSIAN_CHARSET
   Font.Color = clWindowText
   Font.Height = -11
@@ -20,29 +22,30 @@ object fmMain: TfmMain
   object pnlMain: TPanel
     Left = 0
     Top = 0
-    Width = 701
-    Height = 526
+    Width = 552
+    Height = 424
     Align = alClient
     BevelOuter = bvNone
     DoubleBuffered = False
     ParentDoubleBuffered = False
     TabOrder = 0
-    ExplicitWidth = 822
-    ExplicitHeight = 663
+    ExplicitWidth = 701
+    ExplicitHeight = 526
     object splMain: TSplitter
-      Left = 281
+      Left = 217
       Top = 41
-      Height = 449
+      Height = 347
       Color = clWhite
       ParentColor = False
       OnMoved = splMainMoved
+      ExplicitLeft = 281
       ExplicitHeight = 567
     end
     object tvMain: TTreeView
       Left = 0
       Top = 41
-      Width = 281
-      Height = 449
+      Width = 217
+      Height = 347
       Align = alLeft
       Images = imlMain
       Indent = 19
@@ -53,31 +56,36 @@ object fmMain: TfmMain
       OnClick = tvMainClick
       OnGetImageIndex = tvMainGetImageIndex
       OnGetSelectedIndex = tvMainGetImageIndex
-      ExplicitHeight = 586
+      ExplicitHeight = 417
     end
     object pnlTop: TPanel
       Left = 0
       Top = 0
-      Width = 701
+      Width = 552
       Height = 41
       Align = alTop
       TabOrder = 1
-      ExplicitWidth = 822
+      ExplicitWidth = 701
     end
     object pnlBottom: TPanel
       Left = 0
-      Top = 490
-      Width = 701
+      Top = 388
+      Width = 552
       Height = 36
       Align = alBottom
       TabOrder = 2
-      ExplicitTop = 627
-      ExplicitWidth = 822
+      ExplicitLeft = -1
+      ExplicitTop = 513
+      ExplicitWidth = 671
+      DesignSize = (
+        552
+        36)
       object lblUserName: TLabel
-        Left = 7
+        Left = 365
         Top = 9
         Width = 63
         Height = 15
+        Anchors = [akTop, akRight]
         Caption = 'UserName:'
         Font.Charset = RUSSIAN_CHARSET
         Font.Color = clWindowText
@@ -87,10 +95,11 @@ object fmMain: TfmMain
         ParentFont = False
       end
       object edtUserName: TEdit
-        Left = 72
+        Left = 434
         Top = 6
         Width = 105
         Height = 23
+        Anchors = [akTop, akRight, akBottom]
         Font.Charset = RUSSIAN_CHARSET
         Font.Color = clWindowText
         Font.Height = -13
@@ -102,27 +111,28 @@ object fmMain: TfmMain
       end
     end
     object pnlClient: TPanel
-      Left = 284
+      Left = 220
       Top = 41
-      Width = 417
-      Height = 449
+      Width = 332
+      Height = 347
       Align = alClient
       TabOrder = 3
-      ExplicitWidth = 538
-      ExplicitHeight = 586
+      ExplicitLeft = 284
+      ExplicitWidth = 417
+      ExplicitHeight = 449
       object gbInfo: TGroupBox
         Left = 1
         Top = 1
-        Width = 415
-        Height = 447
+        Width = 330
+        Height = 345
         Align = alClient
         Caption = 'Info:'
         TabOrder = 0
-        ExplicitWidth = 536
-        ExplicitHeight = 40
+        ExplicitWidth = 415
+        ExplicitHeight = 447
         DesignSize = (
-          415
-          447)
+          330
+          345)
         object lblName: TLabel
           Left = 10
           Top = 25
@@ -140,8 +150,8 @@ object fmMain: TfmMain
         object edName: TEdit
           Left = 88
           Top = 20
-          Width = 315
-          Height = 26
+          Width = 230
+          Height = 23
           Align = alCustom
           Anchors = [akLeft, akTop, akRight]
           Font.Charset = RUSSIAN_CHARSET
@@ -152,15 +162,18 @@ object fmMain: TfmMain
           ParentFont = False
           ReadOnly = True
           TabOrder = 0
+          ExplicitWidth = 315
         end
-        object mmDesc: TMemo
+        object mmoDesc: TMemo
           Left = 88
           Top = 52
-          Width = 315
+          Width = 230
           Height = 237
           Anchors = [akLeft, akTop, akRight]
+          ReadOnly = True
           ScrollBars = ssBoth
           TabOrder = 1
+          ExplicitWidth = 315
         end
       end
     end

@@ -6,6 +6,7 @@ pnl - TPanel
 lbl - TLabel
 gpb - TGroupBox
 spl - TSplitter
+mmo - TMemo
 tv - TTreeView
 mm - TMainMenu
 mi - TMenuItem
@@ -17,10 +18,12 @@ unit uMain;
 interface
 
 uses
+  // ORDESY Modules
   {$IFDEF Debug}
   uLog,
   {$ENDIF}
-  uORDESY, uExplode, uShellFuncs, uProjectCreate, uOptions,
+  uORDESY, uExplode, uShellFuncs, uProject, uOptions,
+  // Delphi Modules
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, ToolWin, ImgList, Buttons;
 
@@ -64,7 +67,7 @@ type
     edName: TEdit;
     lblName: TLabel;
     lblDescription: TLabel;
-    mmDesc: TMemo;
+    mmoDesc: TMemo;
     miSavechanges: TMenuItem;
     procedure miExitClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
@@ -76,6 +79,7 @@ type
     procedure ViewProjects(aTreeView: TTreeView);
     procedure ppmMainPopup(Sender: TObject);
     procedure EditProject(Sender: TObject);
+    procedure DeleteProject(Sender: TObject);
     procedure tvMainClick(Sender: TObject);
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
@@ -98,6 +102,20 @@ implementation
 
 {$R *.dfm}
 
+procedure TfmMain.DeleteProject(Sender: TObject);
+var
+  reply: word;
+  Project: TORDESYProject;
+begin
+  Project:= TORDESYProject(tvMain.Selected.Data);
+  reply:= MessageBox(Handle, PChar('Delete project?' + #13#10), PChar('Confirm'), 36);
+  if reply = IDYES then
+  begin
+    ProjectList.RemoveProjectById(Project.Id);
+    UpdateGUI;
+  end;
+end;
+
 procedure TfmMain.EditProject(Sender: TObject);
 var
   Project: TORDESYProject;
@@ -105,7 +123,7 @@ begin
   Project:= TORDESYProject(tvMain.Selected.Data);
   if ShowProjectEditDialog(Project) then
   begin
-    //ProjectList.Saved:= false;
+    UpdateGUI;
   end;
 end;
 
@@ -124,33 +142,30 @@ var
   reply: word;
 begin
   try
-    AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
-    AppOptions.SetOption('GUI', 'FormLeft', inttostr(fmMain.Left));
-    AppOptions.SetOption('GUI', 'FormTop', inttostr(fmMain.Top));
-    if not AppOptions.SaveUserOptions() then
-      raise Exception.Create('Cant''t save user options!');
-    if not ProjectList.Saved then
+    if Assigned(AppOptions) then
     begin
-      reply:= MessageBox(handle, PChar('Some data were not retained, save?' + #13#10 +
-        'When refuse, all new data will be lost!'), PChar('Warning!'), 51);
-      if reply = IDYES then
+      AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
+      AppOptions.SetOption('GUI', 'FormLeft', inttostr(fmMain.Left));
+      AppOptions.SetOption('GUI', 'FormTop', inttostr(fmMain.Top));
+      if not AppOptions.SaveUserOptions() then
+        raise Exception.Create('Cant''t save user options!');
+      AppOptions.Free;
+    end;
+    if Assigned(ProjectList) then
+    begin
+      if not ProjectList.Saved then
       begin
-        ProjectList.SaveToFile();
-        ProjectList.Free;
-        Action:= caFree;
-        Application.Terminate;
+        reply:= MessageBox(handle, PChar('Some data were not retained, save?' + #13#10 +
+          'When refuse, all new data will be lost!'), PChar('Warning!'), 51);
+        if reply = IDYES then
+          ProjectList.SaveToFile();
+        if reply = IDCANCEL then
+        begin
+          Action:= caNone;
+          Exit;
+        end;
       end;
-      if reply = IDCANCEL then
-      begin
-        Action:= caNone;
-        Exit;
-      end;
-      if reply = IDNO then
-      begin
-        ProjectList.Free;
-        Action:= caFree;
-        Application.Terminate;
-      end;
+      ProjectList.Free;
     end;
   except
   on E: Exception do
@@ -300,20 +315,20 @@ begin
     // Project Popup
     MenuItem:= TMenuItem.Create(ppmMain);
     MenuItem.OnClick:= miCreateProject.OnClick;
-    MenuItem.Caption:= 'Add project';
+    MenuItem.Caption:= 'Create project';
     MenuItem.Tag:= 1;
     MenuItem.Visible:= false;
     ppmMain.Items.Add(MenuItem);
     //
     MenuItem:= TMenuItem.Create(ppmMain);
     MenuItem.OnClick:= EditProject;
-    MenuItem.Caption:= 'Project options';
+    MenuItem.Caption:= 'Edit project';
     MenuItem.Tag:= 2;
     MenuItem.Visible:= false;
     ppmMain.Items.Add(MenuItem);
     //
     MenuItem:= TMenuItem.Create(ppmMain);
-    //MenuItem.OnClick:=
+    MenuItem.OnClick:= DeleteProject;
     MenuItem.Caption:= 'Delete project';
     MenuItem.Tag:= 3;
     MenuItem.Visible:= false;
@@ -343,9 +358,6 @@ begin
     AppOptions.LoadUserOptions();
     {if not AppOptions.LoadUserOptions() then
       raise Exception.Create('Cant''t load user options!');}
-    {if not Assigned(GroupList) then
-      GroupList:= TGroupList.Create();
-    GroupList.LoadGroups();}
   except
     on E: Exception do
     begin
@@ -361,12 +373,12 @@ end;
 
 procedure TfmMain.PrepareProjects;
 //TEST
-var
+{var
   iProject: TORDESYProject;
   iModule: TORDESYModule;
   iBase: TOraBase;
   iScheme: TOraScheme;
-  iItem: TOraItem;
+  iItem: TOraItem;}
 //END TEST
 begin
   try
@@ -412,32 +424,32 @@ begin
     if TObject(tvMain.Selected.Data) is TORDESYProject then
     begin
       edName.Text:= TORDESYProject(tvMain.Selected.Data).Name;
-      mmDesc.Text:= TORDESYProject(tvMain.Selected.Data).Description;
+      mmoDesc.Text:= TORDESYProject(tvMain.Selected.Data).Description;
     end
     else if TObject(tvMain.Selected.Data) is TORDESYModule then
     begin
       edName.Text:= TORDESYModule(tvMain.Selected.Data).Name;
-      mmDesc.Text:= TORDESYModule(tvMain.Selected.Data).Description;
+      mmoDesc.Text:= TORDESYModule(tvMain.Selected.Data).Description;
     end
     else if TObject(tvMain.Selected.Data) is TOraBase then
     begin
       edName.Text:= TOraBase(tvMain.Selected.Data).Name;
-      mmDesc.Text:= '';
+      mmoDesc.Text:= '';
     end
     else if TObject(tvMain.Selected.Data) is TOraScheme then
     begin
       edName.Text:= TOraScheme(tvMain.Selected.Data).Login;
-      mmDesc.Text:= '';
+      mmoDesc.Text:= '';
     end
     else if TObject(tvMain.Selected.Data) is TOraItem then
     begin
       edName.Text:= TOraItem(tvMain.Selected.Data).Name;
-      mmDesc.Text:= TOraItem(tvMain.Selected.Data).ItemBody;
+      mmoDesc.Text:= TOraItem(tvMain.Selected.Data).ItemBody;
     end
     else
     begin
       edName.Text:= '';
-      mmDesc.Text:= '';
+      mmoDesc.Text:= '';
     end;
 end;
 

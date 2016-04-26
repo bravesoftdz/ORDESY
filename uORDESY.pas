@@ -183,6 +183,8 @@ type
     function GetOraBaseCount: integer;
     function GetOraSchemeCount: integer;
     procedure SetName(const Value: string);
+    procedure SetCreator(const Value: string);
+    procedure SetDescription(const Value: string);
   public
     constructor Create(const aId: integer; const aName: string = 'New Project'; const aDescription: string = 'About new project...'; const aCreator: string = 'nobody'; const aDateCreate: TDateTime = 0);
     destructor Destroy; override;
@@ -215,9 +217,9 @@ type
     procedure DeployItem(const aItemId: integer);
 
     property Id: integer read FId;
-    property Creator: string read FCreator write FCreator;
+    property Creator: string read FCreator write SetCreator;
     property Name: string read FName write SetName;
-    property Description: string read FDescription write FDescription;
+    property Description: string read FDescription write SetDescription;
     property DateCreate: TDateTime read FDateCreate;
     //
     property ModuleCount: integer read GetModuleCount;
@@ -239,8 +241,9 @@ type
     procedure OnChange(Sender: TObject);
   public
     constructor Create;
+    destructor Destroy; override;
     procedure AddProject(aProject: TORDESYProject);
-    procedure RemoveProject(const aIndex: integer);
+    procedure RemoveProjectById(const aId: integer);
     function GetFreeProjectId: integer;
     function GetProjectByIndex(const aIndex: integer): TORDESYProject;
     function GetProjectById(const aId: integer): TORDESYProject;
@@ -280,6 +283,7 @@ begin
   end;
   SetLength(FORDESYModules, length(FORDESYModules) + 1);
   FORDESYModules[high(FORDESYModules)]:= aModule;
+  OnChange(Self);
 end;
 
 procedure TORDESYProject.AddOraBase(aBase: TOraBase);
@@ -293,6 +297,7 @@ begin
   end;
   SetLength(FOraBases, length(FOraBases) + 1);
   FOraBases[high(FOraBases)]:= aBase;
+  OnChange(Self);
 end;
 
 procedure TORDESYProject.AddOraItem(aItem: TOraItem);
@@ -306,8 +311,7 @@ begin
   end;
   SetLength(FOraItems, length(FOraItems) + 1);
   FOraItems[high(FOraItems)]:= aItem;
-  //FOraItems[high(FOraItems)].OnChange:= OnChange;
-  //OnChange(Self);
+  OnChange(Self);
 end;
 
 procedure TORDESYProject.AddOraScheme(aScheme: TOraScheme);
@@ -321,6 +325,7 @@ begin
   end;
   SetLength(FOraSchemes, length(FOraSchemes) + 1);
   FOraSchemes[high(FOraSchemes)]:= aScheme;
+  OnChange(Self);
 end;
 
 constructor TORDESYProject.Create(const aId: integer; const aName: string; const aDescription: string; const aCreator: string; const aDateCreate: TDateTime);
@@ -594,6 +599,18 @@ begin
   for i := 0 to high(FOraSchemes) do
     if FOraSchemes[i].FId = aIndex then
       Result:= FOraSchemes[i].Login;
+end;
+
+procedure TORDESYProject.SetCreator(const Value: string);
+begin
+  FCreator := Value;
+  OnChange(Self);
+end;
+
+procedure TORDESYProject.SetDescription(const Value: string);
+begin
+  FDescription := Value;
+  OnChange(Self);
 end;
 
 procedure TORDESYProject.SetName(const Value: string);
@@ -1189,6 +1206,17 @@ begin
   inherited Create;
 end;
 
+destructor TORDESYProjectList.Destroy;
+var
+  i: integer;
+begin
+  for i := 0 to High(FProjects) do
+    FProjects[i].Free;
+  SetLength(FProjects, 0);
+
+  inherited Destroy;
+end;
+
 function TORDESYProjectList.GetFreeProjectId: integer;
 var
   i, NewId: integer;
@@ -1212,6 +1240,7 @@ function TORDESYProjectList.GetProjectById(const aId: integer): TORDESYProject;
 var
   i: integer;
 begin
+  Result:= nil;
   for i := 0 to high(FProjects) do
   begin
     if FProjects[i].Id = aId then
@@ -1222,6 +1251,7 @@ end;
 function TORDESYProjectList.GetProjectByIndex(
   const aIndex: integer): TORDESYProject;
 begin
+  Result:= nil;
   if (aIndex >= 0) and (aIndex <= high(FProjects)) then
     Result:= FProjects[aIndex];
 end;
@@ -1406,15 +1436,16 @@ begin
   FSaved:= false;
 end;
 
-procedure TORDESYProjectList.RemoveProject(const aIndex: integer);
+procedure TORDESYProjectList.RemoveProjectById(const aId: integer);
 var
   i: integer;
   LastItem: TORDESYProject;
 begin
   for i := 0 to high(FProjects) do
   begin
-    if FProjects[i].Id = aIndex then
+    if FProjects[i].Id = aId then
     begin
+      FProjects[i].Free;
       LastItem:= FProjects[high(FProjects)];
       FProjects[i]:= LastItem;
       SetLength(FProjects, length(FProjects) - 1);

@@ -49,7 +49,6 @@ constructor TOptions.Create;
 begin
   inherited Create;
   FEmpty:= true;
-  SetLength(FOptions, 0);
 end;
 
 destructor TOptions.Destroy;
@@ -62,7 +61,7 @@ function TOptions.GetOption(const aSection, aName: string): string;
 var
   i: integer;
 begin
-  Result:= 'NULL';
+  Result:= '';
   if FEmpty then
     raise Exception.Create('Options are empty, please load from file first!');
   for i := 0 to high(FOptions) do
@@ -120,7 +119,7 @@ begin
         SetLength(FOptions, length(FOptions) + 1);
         FOptions[high(FOptions)].Section:= Sections.Strings[i];
         FOptions[high(FOptions)].Name:= Section.Strings[n];
-        FOptions[high(FOptions)].Value:= iniFile.ReadString(Sections.Strings[i], Section.Strings[n], 'NULL');
+        FOptions[high(FOptions)].Value:= iniFile.ReadString(Sections.Strings[i], Section.Strings[n], '');
       end;
     end;
     if Length(FOptions) <> 0 then
