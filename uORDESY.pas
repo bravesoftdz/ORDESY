@@ -43,6 +43,7 @@ type
   public
     constructor Create(const aId, aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure);
     class function GetItemSqlType(const aType: TOraItemType): string;
+    class function GetItemType(const aType: string): TOraItemType;
     {function Wrap(var aProject: TORDESYProject):boolean;
     function Deploy(var aProject: TORDESYProject): boolean;
     function SaveToProject(var aProject: TORDESYProject): boolean;}
@@ -77,7 +78,6 @@ type
     FPass: string;
     FConnection: TConnection;
     FConnected: boolean;
-    FValid: boolean;
     FOnChange: TNotifyEvent;
     procedure SetBaseId(const Value: integer);
     procedure SetLogin(const Value: string);
@@ -88,6 +88,7 @@ type
     destructor Destroy; override;
     procedure Connect(var aProject: TORDESYProject);
     procedure Disconnect;
+    procedure GetItemList(const aItemType: TOraItemType; var aList: TStringList);
     property Id: integer read FId;
     property ModuleId: integer read FModuleId write SetModuleId;
     property BaseId: integer read FBaseId write SetBaseId;
@@ -95,7 +96,6 @@ type
     property Pass: string read FPass write SetPass;
     property Connection: TConnection read FConnection write FConnection;
     property Connected: boolean read FConnected;
-    property Valid: boolean read FValid;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   end;
 
@@ -216,7 +216,8 @@ begin
   FType:= aType;
   FName:= aName;
   FBody:= aBody;
-  FHash:= GetSimpleHash(PChar(FBody));
+  //FHash:= GetSimpleHash(PChar(FBody));
+  FHash:= MurmurHash2(PAnsiChar(FBody));
   FSchemeId:= aSchemeId;
 end;
 
@@ -630,12 +631,10 @@ begin
         FConnection:= TConnection.Create(aProject.GetOraBaseName(FBaseId), FLogin, FPass, connstrORA);
       FConnection.Connect;
       FConnected:= FConnection.Connected;
-      FValid:= true;
     end;
   except
     on E: Exception do
     begin
-      FValid:= false;
       FConnected:= false;
       {$IFDEF Debug}
       AddToLog(E.Message);
@@ -655,6 +654,7 @@ begin
   FPass:= aPass;
   FBaseId:= aBaseId;
   FModuleId:= aModuleId;
+  FConnected:= false;
 end;
 
 destructor TOraScheme.Destroy;
@@ -672,6 +672,14 @@ begin
   if Assigned(FConnection) and (FConnected) then
     FConnection.Disconnect;
   FConnected:= FConnection.Connected;
+end;
+
+procedure TOraScheme.GetItemList(const aItemType: TOraItemType;
+  var aList: TStringList);
+begin
+  if not Connected then
+    raise Exception.Create('Connect scheme to base first!');
+
 end;
 
 procedure TOraScheme.SetBaseId(const Value: integer);
@@ -722,10 +730,20 @@ begin
   end;
 end;
 
+class function TOraItem.GetItemType(const aType: string): TOraItemType;
+begin
+  Result:= OraProcedure;
+  if aType = 'FUNCTION' then
+    Result:= OraFunction
+  else if aType = 'PACKAGE' then
+    Result:= OraPackage;
+end;
+
 procedure TOraItem.SetBody(const Value: widestring);
 begin
   FBody := Value;
-  FHash:= GetSimpleHash(PChar(FBody));
+  //FHash:= GetSimpleHash(PChar(FBody));
+  FHash:= MurmurHash2(PAnsiChar(FBody));
   OnChange(Self);
 end;
 

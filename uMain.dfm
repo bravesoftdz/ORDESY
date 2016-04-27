@@ -74,9 +74,6 @@ object fmMain: TfmMain
       Height = 36
       Align = alBottom
       TabOrder = 2
-      ExplicitLeft = -1
-      ExplicitTop = 513
-      ExplicitWidth = 671
       DesignSize = (
         552
         36)
@@ -117,9 +114,6 @@ object fmMain: TfmMain
       Height = 347
       Align = alClient
       TabOrder = 3
-      ExplicitLeft = 284
-      ExplicitWidth = 417
-      ExplicitHeight = 449
       object gbInfo: TGroupBox
         Left = 1
         Top = 1
@@ -128,8 +122,6 @@ object fmMain: TfmMain
         Align = alClient
         Caption = 'Info:'
         TabOrder = 0
-        ExplicitWidth = 415
-        ExplicitHeight = 447
         DesignSize = (
           330
           345)

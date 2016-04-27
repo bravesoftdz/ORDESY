@@ -11,6 +11,8 @@ tv - TTreeView
 mm - TMainMenu
 mi - TMenuItem
 fm - TForm
+cbx - TComboBox
+lbx - TListBox
 
 }
 unit uMain;
@@ -22,7 +24,7 @@ uses
   {$IFDEF Debug}
   uLog,
   {$ENDIF}
-  uORDESY, uExplode, uShellFuncs, uProject, uOptions,
+  uORDESY, uExplode, uShellFuncs, uProject, uOptions, uWrap,
   // Delphi Modules
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, ToolWin, ImgList, Buttons;

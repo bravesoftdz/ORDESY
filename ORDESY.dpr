@@ -9,13 +9,14 @@ uses
   uShellFuncs in 'uShellFuncs.pas',
   uProject in 'uProject.pas' {fmProject},
   uOptions in 'uOptions.pas',
-  uHash in 'uHash.pas';
+  uHash in 'uHash.pas',
+  uWrap in 'uWrap.pas' {fmWrap};
 
 {$R *.res}
 
 begin
   {$IFDEF Debug}
-  ReportMemoryLeaksOnShutdown := true; // Проверка на утечки памяти
+  ReportMemoryLeaksOnShutdown := true; // Check for memory leaks
   {$ENDIF}
   Application.Initialize;
   Application.MainFormOnTaskbar := True;

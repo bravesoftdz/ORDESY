@@ -72,7 +72,7 @@ object fmWrap: TfmWrap
       Caption = 'Scheme:'
       ExplicitTop = 471
     end
-    object cbxitemType: TComboBox
+    object cbxItemType: TComboBox
       Left = 8
       Top = 24
       Width = 518
@@ -88,7 +88,7 @@ object fmWrap: TfmWrap
         'PACKAGE')
       ExplicitWidth = 399
     end
-    object ListBox1: TListBox
+    object lbxList: TListBox
       Left = 8
       Top = 51
       Width = 518
@@ -96,8 +96,6 @@ object fmWrap: TfmWrap
       Anchors = [akLeft, akTop, akRight, akBottom]
       ItemHeight = 13
       TabOrder = 1
-      ExplicitWidth = 504
-      ExplicitHeight = 318
     end
     object btnUpdate: TButton
       Left = 289
@@ -106,7 +104,9 @@ object fmWrap: TfmWrap
       Height = 25
       Anchors = [akRight, akBottom]
       Caption = 'Update'
+      ModalResult = 4
       TabOrder = 2
+      OnClick = btnUpdateClick
       ExplicitLeft = 275
       ExplicitTop = 415
     end
@@ -118,6 +118,7 @@ object fmWrap: TfmWrap
       Anchors = [akRight, akBottom]
       Caption = 'Wrap'
       Default = True
+      ModalResult = 1
       TabOrder = 3
       ExplicitLeft = 356
       ExplicitTop = 415
@@ -129,6 +130,7 @@ object fmWrap: TfmWrap
       Height = 25
       Anchors = [akRight, akBottom]
       Caption = 'Close'
+      ModalResult = 11
       TabOrder = 4
       OnClick = btnCloseClick
       ExplicitLeft = 437
