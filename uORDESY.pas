@@ -3,10 +3,12 @@ unit uORDESY;
 interface
 
 uses
+  // ORDESY Modules
   {$IFDEF Debug}
   uLog,
   {$ENDIF}
   uExplode, uConnection, uShellFuncs, uHash,
+  // Delphi Modules
   Generics.Collections, SysUtils, Forms, Windows, Classes;
 
 const
@@ -49,6 +51,7 @@ type
     property ItemType: TOraItemType read FType write SetType;
     property ItemBody: widestring read FBody write SetBody;
     property SchemeId: integer read FSchemeId write SetSchemeId;
+    property Hash: integer read FHash;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
   end;
 
@@ -722,6 +725,7 @@ end;
 procedure TOraItem.SetBody(const Value: widestring);
 begin
   FBody := Value;
+  FHash:= GetSimpleHash(PChar(FBody));
   OnChange(Self);
 end;
 
