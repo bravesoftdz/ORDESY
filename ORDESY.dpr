@@ -8,7 +8,8 @@ uses
   uExplode in 'uExplode.pas',
   uShellFuncs in 'uShellFuncs.pas',
   uProject in 'uProject.pas' {fmProject},
-  uOptions in 'uOptions.pas';
+  uOptions in 'uOptions.pas',
+  uHash in 'uHash.pas';
 
 {$R *.res}
 
