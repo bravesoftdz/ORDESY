@@ -91,13 +91,13 @@ type
     FConnected: boolean;
     FItemList: array of TOraItemHead;
     FOnChange: TNotifyEvent;
-    FProjectRef: TORDESYProject;
+    FProjectRef: Pointer;
     procedure SetBaseId(const Value: integer);
     procedure SetLogin(const Value: string);
     procedure SetModuleId(const Value: integer);
     procedure SetPass(const Value: string);
   public
-    constructor Create(const aId: integer; const aLogin, aPass: string; const aBaseId, aModuleId: integer);
+    constructor Create(aProjectRef: Pointer; const aId: integer; const aLogin, aPass: string; const aBaseId, aModuleId: integer);
     destructor Destroy; override;
     procedure Connect(var aProject: TORDESYProject);
     procedure Disconnect;
@@ -111,6 +111,7 @@ type
     property Connection: TConnection read FConnection write FConnection;
     property Connected: boolean read FConnected;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
+    property ProjectRef: Pointer read FProjectRef;
   end;
 
   TORDESYModule = class
@@ -670,7 +671,7 @@ begin
   end;
 end;
 
-constructor TOraScheme.Create(const aId: integer; const aLogin, aPass: string; const aBaseId, aModuleId: integer);
+constructor TOraScheme.Create(aProjectRef: Pointer; const aId: integer; const aLogin, aPass: string; const aBaseId, aModuleId: integer);
 begin
   inherited Create;
   FId:= aId;
@@ -679,6 +680,7 @@ begin
   FBaseId:= aBaseId;
   FModuleId:= aModuleId;
   FConnected:= false;
+  FProjectRef:= aProjectRef;
 end;
 
 destructor TOraScheme.Destroy;
@@ -1084,6 +1086,7 @@ var
   iName, iDescription, iCreator,
   iLogin, iPass, iBody: String;
   iDateCreate: TDateTime;
+  IItemValid: boolean;
   iProject: TORDESYProject;
   iModule: TORDESYModule;
   iBase: TOraBase;
@@ -1160,6 +1163,7 @@ begin
         end;
         //--- BASES
         FileRead(iHandle, iBaseCount, sizeof(iBaseCount)); // BASE COUNT
+        //MessageBox(Application.Handle, PChar('base loaded count = ' + inttostr(iBaseCount)), PChar('warning'), 0);
         for iB := 0 to iBaseCount - 1 do
         begin
           // Id
@@ -1175,6 +1179,7 @@ begin
         end;
         //--- SCHEMES
         FileRead(iHandle, iSchemeCount, sizeof(iSchemeCount)); // SCHEME COUNT
+        //MessageBox(Application.Handle, PChar('scheme loaded count = ' + inttostr(iSchemeCount)), PChar('warning'), 0);
         for iSc := 0 to iSchemeCount - 1 do
         begin
           // Id
@@ -1192,13 +1197,14 @@ begin
           // BaseId
           FileRead(iHandle, BaseId, sizeof(BaseId));
           // Adding
-          iProject.AddOraScheme(TOraScheme.Create(iId, iLogin, iPass, BaseId, ModuleId));
+          iProject.AddOraScheme(TOraScheme.Create(iProject, iId, iLogin, iPass, BaseId, ModuleId));
           // Free
           SetLength(iLogin, 0);
           SetLength(iPass, 0);
         end;
         //--- ITEMS
         FileRead(iHandle, iItemCount, sizeof(iItemCount)); // ITEM COUNT
+        //MessageBox(Application.Handle, PChar('item loaded count = ' + inttostr(iItemCount)), PChar('warning'), 0);
         for Ii := 0 to iItemCount - 1 do
         begin
           // Id
@@ -1211,12 +1217,14 @@ begin
           FileRead(iHandle, iName[1], strSize * charSize); // Getting Name
           // Type
           FileRead(iHandle, iItemType, sizeof(iItemType));
+          // Valid
+          FileRead(iHandle, iItemValid, sizeof(iItemValid));
           // Body
           FileRead(iHandle, strSize, sizeof(strSize));       // Body length
           SetLength(iBody, strSize);
           FileRead(iHandle, iBody[1], strSize * charSize); // Getting Name
           // Adding
-          iProject.AddOraItem(TOraItem.Create(iId, SchemeId, iName, iBody, iItemType));
+          iProject.AddOraItem(TOraItem.Create(iId, SchemeId, iName, iBody, iItemType, IItemValid));
           // Free
           SetLength(iName, 0);
           SetLength(iBody, 0);
@@ -1329,6 +1337,7 @@ begin
         end;
         //--- BASES
         iBaseCount:= iProject.OraBaseCount;
+        MessageBox(Application.Handle, PChar('base count = ' + inttostr(iBaseCount)), PChar('warning'), 0);
         FileWrite(iHandle, iBaseCount, sizeof(iBaseCount));
         for iB := 0 to iBaseCount - 1 do
         begin
@@ -1341,7 +1350,7 @@ begin
           FileWrite(iHandle, iBase.Name[1], strSize * charSize); // Name
         end;
         //--- SCHEMES
-        iSchemeCount:= iProject.OraBaseCount;
+        iSchemeCount:= iProject.OraSchemeCount;
         FileWrite(iHandle, iSchemeCount, sizeof(iSchemeCount));
         for iSc := 0 to iSchemeCount - 1 do
         begin
@@ -1378,7 +1387,7 @@ begin
           // Type
           FileWrite(iHandle, iItem.ItemType, sizeof(iItem.ItemType));
           // Valid
-          FileWrite(iHandle, iItem.ItemType, sizeof(iItem.ItemType));
+          FileWrite(iHandle, iItem.Valid, sizeof(iItem.Valid));
           // Body
           strSize:= Length(iItem.ItemBody);
           FileWrite(iHandle, strSize, sizeof(strSize));              // Body length
@@ -1411,7 +1420,7 @@ begin
   FId:= aId;
   FName:= aName;
   FDescription:= aDescription;
-  ProjectRef:= aProjectRef;
+  FProjectRef:= aProjectRef;
 end;
 
 procedure TORDESYModule.SetDescription(const Value: widestring);

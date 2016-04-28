@@ -26,7 +26,7 @@ type
   end;
 
 function ShowProjectCreateDialog(const aCreator: string; var aProjectList: TORDESYProjectList): boolean;
-function ShowProjectEditDialog(var aProject: TORDESYProject): boolean;
+function ShowProjectEditDialog(aProject: TORDESYProject): boolean;
 
 implementation
 
@@ -58,7 +58,7 @@ begin
     end;
 end;
 
-function ShowProjectEditDialog(var aProject: TORDESYProject): boolean;
+function ShowProjectEditDialog(aProject: TORDESYProject): boolean;
 label
   check;
 begin

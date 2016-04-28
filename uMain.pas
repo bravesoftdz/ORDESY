@@ -123,11 +123,8 @@ begin
 end;
 
 procedure TfmMain.EditProject(Sender: TObject);
-var
-  Project: TORDESYProject;
 begin
-  Project:= TORDESYProject(tvMain.Selected.Data);
-  if ShowProjectEditDialog(Project) then
+  if ShowProjectEditDialog(TORDESYProject(tvMain.Selected.Data)) then
   begin
     UpdateGUI;
   end;
@@ -298,18 +295,18 @@ var
   BaseName: string;
 begin
   try
-  if InputQuery('Add base', 'Enter base name:', BaseName) then
-  begin
-    if (BaseName <> '') and (Length(BaseName) <= 255) then
+    if InputQuery('Add base', 'Enter base name:', BaseName) then
     begin
-      if (TObject(tvMain.Selected.Data) is TORDESYModule) then
-        with TORDESYProject(TORDESYModule(tvMain.Selected.Data).ProjectRef) do
-        begin
-          AddOraBase(TOraBase.Create(GetFreeBaseId, BaseName));
-          UpdateGUI;
-        end;
+      if (BaseName <> '') and (Length(BaseName) <= 255) then
+      begin
+        if (TObject(tvMain.Selected.Data) is TORDESYModule) then
+          with TORDESYProject(TORDESYModule(tvMain.Selected.Data).ProjectRef) do
+          begin
+            AddOraBase(TOraBase.Create(GetFreeBaseId, BaseName));
+            UpdateGUI;
+          end;
+      end;
     end;
-  end;
   except
     on E: Exception do
     begin
@@ -492,25 +489,27 @@ begin
   try
     if not Assigned(ProjectList) then
       ProjectList:= TORDESYProjectList.Create;
-    //if not ProjectList.LoadFromFile() then
-    //  raise Exception.Create('Error while loading project list. Please check the files/folders!');
+    if not ProjectList.LoadFromFile() then
+      raise Exception.Create('Error while loading project list. Please check the files/folders!');
     //
     //TEST
-    iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'BIG PROJECT');
+    {iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'BIG PROJECT');
     //ShowMessage(BoolToStr(Assigned(iProject), true));
     iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module1', 'DESCRIPTION1'));
-    {iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module2', 'DESCRIPTION2'));
+    iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module2', 'DESCRIPTION2'));
     iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module3', 'DESCRIPTION3'));
     iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module4', 'DESCRIPTION4'));
-    iProject.AddOraBase(TOraBase.Create(iProject.GetFreeBaseId, 'Some BASE'));
-    iProject.AddOraScheme(TOraScheme.Create(iProject.GetFreeSchemeId, 'Scheme of SOME BASE', 'pass', iProject.GetFreeBaseId - 1, iProject.GetFreeModuleId - 1));
+    iProject.AddOraBase(TOraBase.Create(iProject.GetFreeBaseId, 'Some BASE _ 1'));
+    iProject.AddOraBase(TOraBase.Create(iProject.GetFreeBaseId, 'Some BASE _ 2'));
+    iProject.AddOraScheme(TOraScheme.Create(iProject, iProject.GetFreeSchemeId, 'Scheme of SOME BASE', 'pass', iProject.GetFreeBaseId - 1, iProject.GetFreeModuleId - 1));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PROC_1', 'procedure', OraProcedure));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'FUNC_1', 'function', OraFunction));
-    iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PACK_1', 'package', OraPackage));}
-    ProjectList.AddProject(iProject);
+    iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PACK_1', 'package', OraPackage));
+    ProjectList.AddProject(iProject);}
     //ShowMessage(inttostr(ProjectList.GetProjectByIndex(0).OraBaseCount));
     //END TEST
     ViewProjects(tvMain);
+    ShowMessage(ProjectList.GetProjectByIndex(0).GetOraItemByIndex(0).Name);
   except
     on E: Exception do
     begin
