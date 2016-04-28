@@ -22,10 +22,6 @@ object fmWrap: TfmWrap
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitLeft = 112
-    ExplicitTop = 144
-    ExplicitWidth = 185
-    ExplicitHeight = 41
     DesignSize = (
       535
       490)
@@ -86,7 +82,6 @@ object fmWrap: TfmWrap
         'PROCEDURE'
         'FUNCTION'
         'PACKAGE')
-      ExplicitWidth = 399
     end
     object lbxList: TListBox
       Left = 8
@@ -96,6 +91,7 @@ object fmWrap: TfmWrap
       Anchors = [akLeft, akTop, akRight, akBottom]
       ItemHeight = 13
       TabOrder = 1
+      OnDrawItem = lbxListDrawItem
     end
     object btnUpdate: TButton
       Left = 289
@@ -107,8 +103,6 @@ object fmWrap: TfmWrap
       ModalResult = 4
       TabOrder = 2
       OnClick = btnUpdateClick
-      ExplicitLeft = 275
-      ExplicitTop = 415
     end
     object btnWrap: TButton
       Left = 370
@@ -120,8 +114,6 @@ object fmWrap: TfmWrap
       Default = True
       ModalResult = 1
       TabOrder = 3
-      ExplicitLeft = 356
-      ExplicitTop = 415
     end
     object btnClose: TButton
       Left = 451
@@ -133,8 +125,6 @@ object fmWrap: TfmWrap
       ModalResult = 11
       TabOrder = 4
       OnClick = btnCloseClick
-      ExplicitLeft = 437
-      ExplicitTop = 415
     end
   end
 end

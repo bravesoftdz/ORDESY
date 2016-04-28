@@ -39,7 +39,7 @@ begin
 end;
 
 // http://stackoverflow.com/questions/3690608/simple-string-hashing-function
-function MurmurHash2(const S: AnsiString; const Seed: LongWord=$9747b28c): LongWord;
+function MurmurHash2(const S: AnsiString; const Seed: LongWord = $9747b28c): LongWord;
 var
     h: LongWord;
     len: LongWord;

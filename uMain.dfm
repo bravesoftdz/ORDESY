@@ -29,8 +29,6 @@ object fmMain: TfmMain
     DoubleBuffered = False
     ParentDoubleBuffered = False
     TabOrder = 0
-    ExplicitWidth = 701
-    ExplicitHeight = 526
     object splMain: TSplitter
       Left = 217
       Top = 41
@@ -56,7 +54,6 @@ object fmMain: TfmMain
       OnClick = tvMainClick
       OnGetImageIndex = tvMainGetImageIndex
       OnGetSelectedIndex = tvMainGetImageIndex
-      ExplicitHeight = 417
     end
     object pnlTop: TPanel
       Left = 0
@@ -65,7 +62,6 @@ object fmMain: TfmMain
       Height = 41
       Align = alTop
       TabOrder = 1
-      ExplicitWidth = 701
     end
     object pnlBottom: TPanel
       Left = 0
@@ -154,7 +150,6 @@ object fmMain: TfmMain
           ParentFont = False
           ReadOnly = True
           TabOrder = 0
-          ExplicitWidth = 315
         end
         object mmoDesc: TMemo
           Left = 88
@@ -165,7 +160,6 @@ object fmMain: TfmMain
           ReadOnly = True
           ScrollBars = ssBoth
           TabOrder = 1
-          ExplicitWidth = 315
         end
       end
     end
@@ -210,7 +204,7 @@ object fmMain: TfmMain
       object miCreateModule: TMenuItem
         Caption = 'Create module'
       end
-      object miModuleOptions: TMenuItem
+      object miEditModule: TMenuItem
         Caption = 'Module options'
       end
     end
@@ -219,7 +213,7 @@ object fmMain: TfmMain
       object miCreateBase: TMenuItem
         Caption = 'Create base'
       end
-      object miBaseOptions: TMenuItem
+      object miEditBase: TMenuItem
         Caption = 'Base options'
       end
     end
@@ -228,17 +222,20 @@ object fmMain: TfmMain
       object miCreateScheme: TMenuItem
         Caption = 'Create scheme'
       end
-      object miSchemeOptions: TMenuItem
+      object miEditScheme: TMenuItem
         Caption = 'Scheme options'
       end
     end
-    object miObject: TMenuItem
-      Caption = 'Object'
-      object miCreateObject: TMenuItem
-        Caption = 'Create object'
+    object miItem: TMenuItem
+      Caption = 'Item'
+      object miCreateItem: TMenuItem
+        Caption = 'Create item'
       end
-      object miObjectOptions: TMenuItem
+      object miEditItem: TMenuItem
         Caption = 'Object options'
+      end
+      object miWrapItem: TMenuItem
+        Caption = 'Wrap item'
       end
     end
     object miLast: TMenuItem

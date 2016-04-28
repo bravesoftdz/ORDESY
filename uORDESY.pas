@@ -9,7 +9,7 @@ uses
   {$ENDIF}
   uExplode, uConnection, uShellFuncs, uHash,
   // Delphi Modules
-  Generics.Collections, SysUtils, Forms, Windows, Classes;
+  Generics.Collections, SysUtils, Forms, Windows, Classes, Controls;
 
 const
   ORDESYNAME = 'ORDESY PROJECT';
@@ -25,6 +25,14 @@ type
   TOraBase = class;
   TORDESYModule = class;
   TORDESYProject = class;
+  TORDESYProjectList = class;
+  TPORDESYProject = ^TORDESYProject;
+
+  TOraItemHead = class
+    Name: string;
+    ItemType: TOraItemType;
+    Valid: boolean;
+  end;
 
   TOraItem = class
   private
@@ -32,6 +40,7 @@ type
     FSchemeId: integer;
     FHash: integer;
     FType: TOraItemType;
+    FValid: boolean;
     FName: string;
     FBody: WideString;
     FOnChange: TNotifyEvent;
@@ -41,15 +50,17 @@ type
     procedure SetSchemeId(const Value: integer);
     //FLastChange: TDatetime;
   public
-    constructor Create(const aId, aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure);
+    constructor Create(const aId, aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aValid: boolean = false);
     class function GetItemSqlType(const aType: TOraItemType): string;
     class function GetItemType(const aType: string): TOraItemType;
+    procedure UpdateStatus(var aProject: TORDESYProject);
     {function Wrap(var aProject: TORDESYProject):boolean;
     function Deploy(var aProject: TORDESYProject): boolean;
     function SaveToProject(var aProject: TORDESYProject): boolean;}
     property Id: integer read FId;
     property Name: string read FName write SetName;
     property ItemType: TOraItemType read FType write SetType;
+    property Valid: boolean read FValid;
     property ItemBody: widestring read FBody write SetBody;
     property SchemeId: integer read FSchemeId write SetSchemeId;
     property Hash: integer read FHash;
@@ -78,7 +89,9 @@ type
     FPass: string;
     FConnection: TConnection;
     FConnected: boolean;
+    FItemList: array of TOraItemHead;
     FOnChange: TNotifyEvent;
+    FProjectRef: TORDESYProject;
     procedure SetBaseId(const Value: integer);
     procedure SetLogin(const Value: string);
     procedure SetModuleId(const Value: integer);
@@ -88,7 +101,8 @@ type
     destructor Destroy; override;
     procedure Connect(var aProject: TORDESYProject);
     procedure Disconnect;
-    procedure GetItemList(const aItemType: TOraItemType; var aList: TStringList);
+    procedure GetItemList(const aItemType: TOraItemType; aList: TStrings);
+    function GetProjectId(var aProjectList: TORDESYProjectList): integer;
     property Id: integer read FId;
     property ModuleId: integer read FModuleId write SetModuleId;
     property BaseId: integer read FBaseId write SetBaseId;
@@ -105,14 +119,16 @@ type
     FName: string;
     FDescription: WideString;
     FOnChange: TNotifyEvent;
+    FProjectRef: Pointer;
     procedure SetDescription(const Value: widestring);
     procedure SetName(const Value: string);
   public
-    constructor Create(const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = '');
+    constructor Create(aProjectRef: Pointer; const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = '');
     property Id: integer read FId;
     property Name: string read FName write SetName;
     property Description: widestring read FDescription write SetDescription;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
+    property ProjectRef: Pointer read FProjectRef write FProjectRef;
   end;
 
   TORDESYProject = class
@@ -209,11 +225,12 @@ implementation
 
 { TDBItem }
 
-constructor TOraItem.Create(const aId, aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure);
+constructor TOraItem.Create(const aId, aSchemeId: integer; const aName: string; const aBody: WideString = ''; const aType: TOraItemType = OraProcedure; const aValid: boolean = false);
 begin
   inherited Create;
   FId:= aId;
   FType:= aType;
+  FValid:= aValid;
   FName:= aName;
   FBody:= aBody;
   //FHash:= GetSimpleHash(PChar(FBody));
@@ -234,7 +251,8 @@ begin
   end;
   SetLength(FORDESYModules, length(FORDESYModules) + 1);
   FORDESYModules[high(FORDESYModules)]:= aModule;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TORDESYProject.AddOraBase(aBase: TOraBase);
@@ -248,7 +266,8 @@ begin
   end;
   SetLength(FOraBases, length(FOraBases) + 1);
   FOraBases[high(FOraBases)]:= aBase;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TORDESYProject.AddOraItem(aItem: TOraItem);
@@ -262,7 +281,8 @@ begin
   end;
   SetLength(FOraItems, length(FOraItems) + 1);
   FOraItems[high(FOraItems)]:= aItem;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TORDESYProject.AddOraScheme(aScheme: TOraScheme);
@@ -276,7 +296,8 @@ begin
   end;
   SetLength(FOraSchemes, length(FOraSchemes) + 1);
   FOraSchemes[high(FOraSchemes)]:= aScheme;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 constructor TORDESYProject.Create(const aId: integer; const aName: string; const aDescription: string; const aCreator: string; const aDateCreate: TDateTime);
@@ -453,7 +474,7 @@ end;
 function TORDESYProject.GetOraBaseByIndex(const aIndex: integer): TOraBase;
 begin
   Result:= nil;
-  if (aIndex >= 0) and (aIndex<= high(FOraBases)) then
+  if (aIndex >= 0) and (aIndex <= high(FOraBases)) then
      Result:= FOraBases[aIndex]
   else
     raise Exception.Create('Incorrect base index. Max value is: ' + IntToStr(high(FOraBases)));
@@ -555,19 +576,22 @@ end;
 procedure TORDESYProject.SetCreator(const Value: string);
 begin
   FCreator := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TORDESYProject.SetDescription(const Value: string);
 begin
   FDescription := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TORDESYProject.SetName(const Value: string);
 begin
   FName := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TORDESYProject.WrapItem(const aSchemeId: integer; const aName: string;
@@ -658,12 +682,17 @@ begin
 end;
 
 destructor TOraScheme.Destroy;
+var
+  i: integer;
 begin
   if Assigned(FConnection) then
   begin
     FConnection.Disconnect;
     FConnection.Free;
   end;
+  for i := 0 to High(FItemList) do
+    FItemList[i].Free;
+  SetLength(FItemList, 0);
   inherited Destroy;
 end;
 
@@ -674,36 +703,94 @@ begin
   FConnected:= FConnection.Connected;
 end;
 
-procedure TOraScheme.GetItemList(const aItemType: TOraItemType;
-  var aList: TStringList);
+procedure TOraScheme.GetItemList(const aItemType: TOraItemType; aList: TStrings);
 begin
-  if not Connected then
-    raise Exception.Create('Connect scheme to base first!');
+  try
+    SetLength(FItemList, 0);
+    if not Connected then
+      raise Exception.Create('Connect scheme to base first.');
+    if not Assigned(aList) then
+      raise Exception.Create('The list of items not defined.');
+    with Connection.Query do
+    begin
+      aList.BeginUpdate;
+      aList.Clear;
+      Active:= false;
+      SQL.Text:= 'select object_name, status from sys.all_objects where owner = user and subobject_name is null and object_name not like ''BIN$%'' and object_type = '''  + TOraItem.GetItemSqlType(aItemType) + '''';
+      Active:= true;
+      if RecordCount = 0 then
+        raise Exception.Create('Error while getting items list.');
+      while not Eof do
+      begin
+        SetLength(FItemList, length(FItemList) + 1);
+        FItemList[High(FItemList)] := TOraItemHead.Create;
+        FItemList[High(FItemList)].Name:= Fields[0].AsString;
+        if Fields[1].AsString = 'VALID' then
+          FItemList[High(FItemList)].Valid:= true
+        else
+          FItemList[High(FItemList)].Valid:= false;
+        FItemList[High(FItemList)].ItemType:= aItemType;
+        aList.AddObject(FItemList[High(FItemList)].Name, FItemList[High(FItemList)]);
+      end;
+      aList.EndUpdate;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | GetItemList | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | GetItemList | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
+end;
 
+function TOraScheme.GetProjectId(var aProjectList: TORDESYProjectList): integer;
+var
+  i, n: integer;
+begin
+  Result:= 0;
+  for i := 0 to aProjectList.Count - 1 do
+  begin
+    with aProjectList.GetProjectByIndex(i) do
+    begin
+      for n := 0 to OraSchemeCount - 1 do
+      begin
+        if GetOraSchemeByIndex(n) = Self then
+          Result:= i;
+      end;
+    end;
+  end;
 end;
 
 procedure TOraScheme.SetBaseId(const Value: integer);
 begin
   FBaseId := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TOraScheme.SetLogin(const Value: string);
 begin
   FLogin := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TOraScheme.SetModuleId(const Value: integer);
 begin
   FModuleId := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TOraScheme.SetPass(const Value: string);
 begin
   FPass := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 { TOraBase }
@@ -750,19 +837,66 @@ end;
 procedure TOraItem.SetName(const Value: string);
 begin
   FName := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TOraItem.SetSchemeId(const Value: integer);
 begin
   FSchemeId := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TOraItem.SetType(const Value: TOraItemType);
 begin
   FType := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
+end;
+
+procedure TOraItem.UpdateStatus(var aProject: TORDESYProject);
+var
+  iScheme: TOraScheme;
+begin
+  try
+    try
+      Screen.Cursor := crSQLWait;
+      iScheme:= aProject.GetOraSchemeById(SchemeId);
+      if not Assigned(iScheme) then
+        raise Exception.Create('Error while connecting throw item scheme. SchemeId = ' + IntToStr(SchemeId));
+      if not iScheme.Connected then
+        iScheme.Connect(aProject);
+      with iScheme.Connection.Query do
+      begin
+        Active:= false;
+        SQL.Text:= 'select created, last_ddl_time, status from sys.all_objects where owner = user and object_name not like ''BIN$%'' and subobjectname is null and object_type = ''' + TOraItem.GetItemSqlType(ItemType) + '''' + ' and objectname = ''' + Name + '''';
+        Active:= true;
+        if RecordCount = 0 then
+          raise Exception.Create('The item not deployed yet or deleted manualy. Can''t get status.')
+        else
+        begin
+          First;
+          if Fields[2].ToString = 'VALID' then
+            FValid:= true
+          else
+            FValid:= false;
+        end;
+      end;
+    finally
+      Screen.Cursor := crDefault;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | UpdateStatus | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | UpdateStatus | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
 end;
 
 (*function TOraItem.SaveToProject(var aProject: TORDESYProject): boolean;
@@ -1019,7 +1153,7 @@ begin
           SetLength(iDescription, strSize);
           FileRead(iHandle, iDescription[1], strSize * charSize); // Getting Desc
           // Adding
-          iProject.AddModule(TORDESYModule.Create(iId, iName, iDescription));
+          iProject.AddModule(TORDESYModule.Create(iProject ,iId, iName, iDescription));
           // Free
           SetLength(iName, 0);
           SetLength(iDescription, 0);
@@ -1243,6 +1377,8 @@ begin
           FileWrite(iHandle, iItem.Name[1], strSize * charSize); // Name
           // Type
           FileWrite(iHandle, iItem.ItemType, sizeof(iItem.ItemType));
+          // Valid
+          FileWrite(iHandle, iItem.ItemType, sizeof(iItem.ItemType));
           // Body
           strSize:= Length(iItem.ItemBody);
           FileWrite(iHandle, strSize, sizeof(strSize));              // Body length
@@ -1269,24 +1405,27 @@ end;
 
 { TORDESYModule }
 
-constructor TORDESYModule.Create(const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = '');
+constructor TORDESYModule.Create(aProjectRef: Pointer; const aId: integer; const aName: string = 'New Module'; const aDescription: WideString = '');
 begin
   inherited Create;
   FId:= aId;
   FName:= aName;
   FDescription:= aDescription;
+  ProjectRef:= aProjectRef;
 end;
 
 procedure TORDESYModule.SetDescription(const Value: widestring);
 begin
   FDescription := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TORDESYModule.SetName(const Value: string);
 begin
   FName := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 end.

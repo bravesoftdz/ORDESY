@@ -49,11 +49,11 @@ type
     miShowAll: TMenuItem;
     miScheme: TMenuItem;
     miCreateScheme: TMenuItem;
-    miSchemeOptions: TMenuItem;
+    miEditScheme: TMenuItem;
     miProjectOptions: TMenuItem;
-    miObject: TMenuItem;
-    miCreateObject: TMenuItem;
-    miObjectOptions: TMenuItem;
+    miItem: TMenuItem;
+    miCreateItem: TMenuItem;
+    miEditItem: TMenuItem;
     miLast: TMenuItem;
     miAbout: TMenuItem;
     miHelp: TMenuItem;
@@ -61,9 +61,9 @@ type
     miBase: TMenuItem;
     miCreateBase: TMenuItem;
     miModule: TMenuItem;
-    miBaseOptions: TMenuItem;
+    miEditBase: TMenuItem;
     miCreateModule: TMenuItem;
-    miModuleOptions: TMenuItem;
+    miEditModule: TMenuItem;
     ppmMain: TPopupMenu;
     gbInfo: TGroupBox;
     edName: TEdit;
@@ -71,6 +71,7 @@ type
     lblDescription: TLabel;
     mmoDesc: TMemo;
     miSavechanges: TMenuItem;
+    miWrapItem: TMenuItem;
     procedure miExitClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
@@ -82,12 +83,15 @@ type
     procedure ppmMainPopup(Sender: TObject);
     procedure EditProject(Sender: TObject);
     procedure DeleteProject(Sender: TObject);
+    procedure WrapItem(Sender: TObject);
+    procedure AddBase(Sender: TObject);
     procedure tvMainClick(Sender: TObject);
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
   private
     AppOptions: TOptions;
     ProjectList: TORDESYProjectList;
+    function CanPopup(const aTag: integer; aObject: TObject): boolean;
     procedure PrepareGUI;
     procedure UpdateGUI;
     procedure PrepareOptions;
@@ -289,19 +293,67 @@ begin
     ProjectList.SaveToFile();
 end;
 
+procedure TfmMain.AddBase(Sender: TObject);
+var
+  BaseName: string;
+begin
+  try
+  if InputQuery('Add base', 'Enter base name:', BaseName) then
+  begin
+    if (BaseName <> '') and (Length(BaseName) <= 255) then
+    begin
+      if (TObject(tvMain.Selected.Data) is TORDESYModule) then
+        with TORDESYProject(TORDESYModule(tvMain.Selected.Data).ProjectRef) do
+        begin
+          AddOraBase(TOraBase.Create(GetFreeBaseId, BaseName));
+          UpdateGUI;
+        end;
+    end;
+  end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | AddBase | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | AddBase | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
+end;
+
+function TfmMain.CanPopup(const aTag: integer; aObject: TObject): boolean;
+begin
+  Result:= false;
+  if aObject <> nil then
+  begin
+    if (aObject is TORDESYProject) and (aTag >= 1) and (aTag <= 10) then
+      Result:= true;
+    if (aObject is TORDESYModule) and (aTag >= 11) and (aTag <= 20) then
+      Result:= true;
+    if (aObject is TOraBase) and (aTag >= 21) and (aTag <= 30) then
+      Result:= true;
+    if (aObject is TOraScheme) and (aTag >= 31) and (aTag <= 40) then
+      Result:= True;
+    if (aObject is TOraItem) and (aTag >= 41) and (aTag <= 50) then
+      Result:= true;
+  end;
+end;
+
 procedure TfmMain.ppmMainPopup(Sender: TObject);
 var
   i: integer;
 begin
   for i := 0 to ppmMain.Items.Count - 1 do
   begin
-    if Assigned(tvMain.Selected) and  (TObject(tvMain.Selected.Data) is TORDESYProject) then
+    if Assigned(tvMain.Selected) and (tvMain.Selected.Data <> nil) then
     begin
-      if (ppmMain.Items[i].Tag >= 1) and (ppmMain.Items[i].Tag <= 10) then
+      if CanPopup(ppmMain.Items[i].Tag , TObject(tvMain.Selected.Data)) then
         ppmMain.Items[i].Visible:= true
-    end
       else
         ppmMain.Items[i].Visible:= false;
+    end;
   end;
 end;
 
@@ -314,7 +366,7 @@ begin
     tvMain.Width:= strtoint(AppOptions.GetOption('GUI', 'GroupList'));
     fmMain.Width:= strtoint(AppOptions.GetOption('GUI', 'FormWidth'));
     fmMain.Height:= strtoint(AppOptions.GetOption('GUI', 'FormHeight'));
-    // Project Popup
+    // -----------------------------------------Project Popup 1-10
     MenuItem:= TMenuItem.Create(ppmMain);
     MenuItem.OnClick:= miCreateProject.OnClick;
     MenuItem.Caption:= 'Create project';
@@ -335,8 +387,62 @@ begin
     MenuItem.Tag:= 3;
     MenuItem.Visible:= false;
     ppmMain.Items.Add(MenuItem);
-    // Module popup
-
+    // -----------------------------------------Module popup 11-20
+    MenuItem:= TMenuItem.Create(ppmMain);
+    MenuItem.OnClick:= AddBase;
+    MenuItem.Caption:= 'Add base';
+    MenuItem.Tag:= 11;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
+    // -----------------------------------------Base popup 21-30
+    MenuItem:= TMenuItem.Create(ppmMain);
+    MenuItem.OnClick:= AddBase;
+    MenuItem.Caption:= 'Add base';
+    MenuItem.Tag:= 21;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
+    //
+    MenuItem:= TMenuItem.Create(ppmMain);
+    //MenuItem.OnClick:= miCreateProject.OnClick;
+    MenuItem.Caption:= 'Edit base';
+    MenuItem.Tag:= 22;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
+    //
+    MenuItem:= TMenuItem.Create(ppmMain);
+    //MenuItem.OnClick:= miCreateProject.OnClick;
+    MenuItem.Caption:= 'Delete base';
+    MenuItem.Tag:= 23;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
+    // -----------------------------------------Scheme popup 31-40
+    MenuItem:= TMenuItem.Create(ppmMain);
+    //MenuItem.OnClick:= miCreateProject.OnClick;
+    MenuItem.Caption:= 'Add scheme';
+    MenuItem.Tag:= 31;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
+    //
+    MenuItem:= TMenuItem.Create(ppmMain);
+    //MenuItem.OnClick:= EditScheme
+    MenuItem.Caption:= 'Edit scheme';
+    MenuItem.Tag:= 32;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
+    //
+    MenuItem:= TMenuItem.Create(ppmMain);
+    MenuItem.OnClick:= WrapItem;
+    MenuItem.Caption:= 'Wrap item';
+    MenuItem.Tag:= 33;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
+    //
+    MenuItem:= TMenuItem.Create(ppmMain);
+    //MenuItem.OnClick:= EditScheme
+    MenuItem.Caption:= 'Delete scheme';
+    MenuItem.Tag:= 34;
+    MenuItem.Visible:= false;
+    ppmMain.Items.Add(MenuItem);
   except
     on E: Exception do
     begin
@@ -375,31 +481,34 @@ end;
 
 procedure TfmMain.PrepareProjects;
 //TEST
-{var
+var
   iProject: TORDESYProject;
   iModule: TORDESYModule;
   iBase: TOraBase;
   iScheme: TOraScheme;
-  iItem: TOraItem;}
+  iItem: TOraItem;
 //END TEST
 begin
   try
     if not Assigned(ProjectList) then
       ProjectList:= TORDESYProjectList.Create;
-    if not ProjectList.LoadFromFile() then
-      raise Exception.Create('Error while loading project list. Please check the files/folders!');
+    //if not ProjectList.LoadFromFile() then
+    //  raise Exception.Create('Error while loading project list. Please check the files/folders!');
+    //
     //TEST
-    {iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'BIG PROJECT');
-    iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module1', 'DESCRIPTION1'));
-    iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module2', 'DESCRIPTION2'));
-    iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module3', 'DESCRIPTION3'));
-    iProject.AddModule(TORDESYModule.Create(iProject.GetFreeModuleId, 'Little Module4', 'DESCRIPTION4'));
+    iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'BIG PROJECT');
+    //ShowMessage(BoolToStr(Assigned(iProject), true));
+    iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module1', 'DESCRIPTION1'));
+    {iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module2', 'DESCRIPTION2'));
+    iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module3', 'DESCRIPTION3'));
+    iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module4', 'DESCRIPTION4'));
     iProject.AddOraBase(TOraBase.Create(iProject.GetFreeBaseId, 'Some BASE'));
     iProject.AddOraScheme(TOraScheme.Create(iProject.GetFreeSchemeId, 'Scheme of SOME BASE', 'pass', iProject.GetFreeBaseId - 1, iProject.GetFreeModuleId - 1));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PROC_1', 'procedure', OraProcedure));
     iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'FUNC_1', 'function', OraFunction));
-    iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PACK_1', 'package', OraPackage));
-    ProjectList.AddProject(iProject);}
+    iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PACK_1', 'package', OraPackage));}
+    ProjectList.AddProject(iProject);
+    //ShowMessage(inttostr(ProjectList.GetProjectByIndex(0).OraBaseCount));
     //END TEST
     ViewProjects(tvMain);
   except
@@ -513,6 +622,14 @@ begin
   begin
     AppOptions.SetOption('GUI', 'FormWidth', inttostr(fmMain.Width));
     AppOptions.SetOption('GUI', 'FormHeight', inttostr(fmMain.Height));
+  end;
+end;
+
+procedure TfmMain.WrapItem(Sender: TObject);
+begin
+  with TOraScheme(tvMain.Selected.Data) do
+  begin
+    if ShowWrapDialog(Id, ProjectList.GetProjectById(GetProjectId(ProjectList))) then
   end;
 end;
 
