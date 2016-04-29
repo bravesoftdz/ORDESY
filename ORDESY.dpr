@@ -7,7 +7,7 @@ uses
   uLog in 'uLog.pas',
   uExplode in 'uExplode.pas',
   uShellFuncs in 'uShellFuncs.pas',
-  uProject in 'uProject.pas' {fmProject},
+  uProjectDialogs in 'uProjectDialogs.pas' {fmProject},
   uOptions in 'uOptions.pas',
   uHash in 'uHash.pas',
   uWrap in 'uWrap.pas' {fmWrap};

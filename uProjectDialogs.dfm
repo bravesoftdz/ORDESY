@@ -3,7 +3,7 @@ object fmProjectCreate: TfmProjectCreate
   Top = 0
   BorderIcons = [biSystemMenu]
   BorderStyle = bsSizeToolWin
-  Caption = 'Create Project'
+  Caption = 'Add Project'
   ClientHeight = 281
   ClientWidth = 414
   Color = clBtnFace

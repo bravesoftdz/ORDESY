@@ -25,20 +25,26 @@ type
     lblModule: TLabel;
     lblBase: TLabel;
     lblScheme: TLabel;
+    cbxBaseList: TComboBox;
+    cbxSchemeList: TComboBox;
+    lblBaseList: TLabel;
+    lblSchemeList: TLabel;
     procedure btnCloseClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure btnUpdateClick(Sender: TObject);
     procedure lbxListDrawItem(Control: TWinControl; Index: Integer; Rect: TRect;
       State: TOwnerDrawState);
+    procedure cbxBaseListSelect(Sender: TObject);
   private
-    SchemeId: integer;
     CurrentProject: TORDESYProject;
+    CurrentBase: TOraBase;
+    CurrentScheme: TOraScheme;
   end;
 
 var
   fmWrap: TfmWrap;
 
-function ShowWrapDialog(const aSchemeId: integer; aProject: TORDESYProject): boolean;
+function ShowWrapDialog(aModule: TORDESYModule; aProjectList: TORDESYProjectList): boolean;
 
 implementation
 
@@ -47,24 +53,27 @@ implementation
 uses
   uMain;
 
-function ShowWrapDialog(const aSchemeId: integer; aProject: TORDESYProject): boolean;
+function ShowWrapDialog(aModule: TORDESYModule; aProjectList: TORDESYProjectList): boolean;
 var
   iScheme: TOraScheme;
+  i: integer;
 begin
   with TfmWrap.Create(Application) do
     try
       Result:= false;
-      CurrentProject:= aProject;
-      SchemeId:= aSchemeId;
-      lblProject.Caption:= 'Project: ' + aProject.Name;
+      CurrentProject:= TORDESYProject(aModule.ProjectRef);
+      for i := 0 to aProjectList.OraBaseCount - 1 do
+        cbxBaseList.Items.AddObject(aProjectList.GetOraBaseByIndex(i).Name, aProjectList.GetOraBaseByIndex(i));
+      for i := 0 to aProjectList.OraSchemeCount - 1 do
+        cbxSchemeList.Items.AddObject(aProjectList.GetOraSchemeByIndex(i).Login, aProjectList.GetOraSchemeByIndex(i));
+      {lblProject.Caption:= 'Project: ' + aProject.Name;
       lblModule.Caption:= 'Module: ' + aProject.GetModuleById(aProject.GetOraSchemeById(SchemeId).ModuleId).Name;
       lblBase.Caption:= 'Base: ' + aProject.GetOraBaseById(aProject.GetOraSchemeById(SchemeId).BaseId).Name;
-      lblScheme.Caption:= 'Scheme: ' + aProject.GetOraSchemeById(SchemeId).Login;
-      btnUpdateClick(nil);
+      lblScheme.Caption:= 'Scheme: ' + aProject.GetOraSchemeById(SchemeId).Login;}
       if ShowModal = mrOk then
       begin
         try
-          CurrentProject.WrapItem(aSchemeId,  lbxList.Items.Strings[lbxList.ItemIndex], TOraItem.GetItemType(cbxItemType.Items[cbxItemType.ItemIndex]));
+          CurrentProject.WrapItem(aModule.Id, TOraBase(cbxBaseList.Items.Objects[cbxBaseList.ItemIndex]).Id, TOraScheme(cbxSchemeList.Items.Objects[cbxSchemeList.ItemIndex]).Id, lbxList.Items.Strings[lbxList.ItemIndex], TOraItem.GetItemType(cbxItemType.Items[cbxItemType.ItemIndex]));
           Result:= true;
         except
           on E: Exception do
@@ -90,11 +99,17 @@ end;
 
 procedure TfmWrap.btnUpdateClick(Sender: TObject);
 begin
-  if Assigned(CurrentProject) then
+  if Assigned(CurrentProject) and Assigned(CurrentBase) and Assigned(CurrentScheme) then
   begin
-    CurrentProject.GetOraSchemeById(SchemeId).Connect(CurrentProject);
-    CurrentProject.GetOraSchemeById(SchemeId).GetItemList(TOraItem.GetItemType(cbxItemType.Items[cbxItemType.ItemIndex]), lbxList.Items);
+    CurrentScheme.Connect(CurrentBase.Id);
+    CurrentScheme.GetItemList(TOraItem.GetItemType(cbxItemType.Items[cbxItemType.ItemIndex]), lbxList.Items);
   end;
+end;
+
+procedure TfmWrap.cbxBaseListSelect(Sender: TObject);
+begin
+  if (cbxBaseList.Items.Count > 0) and (cbxBaseList.Items.Objects[cbxBaseList.ItemIndex] <> nil) and (TObject(cbxBaseList.Items.Objects[cbxBaseList.ItemIndex]) is TOraBase) then
+    CurrentBase:= TOraBase(cbxBaseList.Items.Objects[cbxBaseList.ItemIndex]);
 end;
 
 procedure TfmWrap.FormClose(Sender: TObject; var Action: TCloseAction);

@@ -24,7 +24,7 @@ uses
   {$IFDEF Debug}
   uLog,
   {$ENDIF}
-  uORDESY, uExplode, uShellFuncs, uProject, uOptions, uWrap,
+  uORDESY, uExplode, uShellFuncs, uProjectDialogs, uOptions, uWrap,
   // Delphi Modules
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, ToolWin, ImgList, Buttons;
@@ -43,27 +43,20 @@ type
     edtUserName: TEdit;
     lblUserName: TLabel;
     miProject: TMenuItem;
-    miCreateProject: TMenuItem;
+    miAddProject: TMenuItem;
     miOptions: TMenuItem;
     miShow: TMenuItem;
     miShowAll: TMenuItem;
     miScheme: TMenuItem;
-    miCreateScheme: TMenuItem;
-    miEditScheme: TMenuItem;
-    miProjectOptions: TMenuItem;
-    miItem: TMenuItem;
-    miCreateItem: TMenuItem;
-    miEditItem: TMenuItem;
+    miAddScheme: TMenuItem;
+    miSchemeList: TMenuItem;
+    miEditProject: TMenuItem;
     miLast: TMenuItem;
     miAbout: TMenuItem;
     miHelp: TMenuItem;
     splMain: TSplitter;
     miBase: TMenuItem;
-    miCreateBase: TMenuItem;
-    miModule: TMenuItem;
-    miEditBase: TMenuItem;
-    miCreateModule: TMenuItem;
-    miEditModule: TMenuItem;
+    miBaseList: TMenuItem;
     ppmMain: TPopupMenu;
     gbInfo: TGroupBox;
     edName: TEdit;
@@ -71,27 +64,36 @@ type
     lblDescription: TLabel;
     mmoDesc: TMemo;
     miSavechanges: TMenuItem;
+    miModule: TMenuItem;
+    miModuleList: TMenuItem;
+    AddModule1: TMenuItem;
+    miAddBase: TMenuItem;
+    miItem: TMenuItem;
+    miItemList: TMenuItem;
     miWrapItem: TMenuItem;
+    miDeployItem: TMenuItem;
     procedure miExitClick(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
     procedure splMainMoved(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure WMWindowPosChanged(var aMessage: TWMWindowPosChanged); message WM_WINDOWPOSCHANGED;
-    procedure miCreateProjectClick(Sender: TObject);
     procedure ViewProjects(aTreeView: TTreeView);
     procedure ppmMainPopup(Sender: TObject);
+    procedure AddProject(Sender: TObject);
     procedure EditProject(Sender: TObject);
     procedure DeleteProject(Sender: TObject);
     procedure WrapItem(Sender: TObject);
-    procedure AddBase(Sender: TObject);
+    procedure AddModule(Sender: TObject);
+    procedure EditModule(Sender: TObject);
+    procedure DeleteModule(Sender: TObject);
     procedure tvMainClick(Sender: TObject);
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
   private
     AppOptions: TOptions;
     ProjectList: TORDESYProjectList;
-    function CanPopup(const aTag: integer; aObject: TObject): boolean;
+    function CanPopup(const aTag: integer; aObject: Pointer): boolean;
     procedure PrepareGUI;
     procedure UpdateGUI;
     procedure PrepareOptions;
@@ -108,6 +110,22 @@ implementation
 
 {$R *.dfm}
 
+procedure TfmMain.DeleteModule(Sender: TObject);
+var
+  reply: word;
+  Project: TORDESYProject;
+begin
+  Project:= TORDESYProject(TORDESYModule(tvMain.Selected.Data).ProjectRef);
+  reply:= MessageBox(Handle, PChar('Delete module?' + #13#10), PChar('Confirm'), 36);
+  if reply = IDYES then
+  begin
+    tvMain.Deselect(tvMain.Selected);
+    Project.RemoveModuleById(TORDESYModule(tvMain.Selected.Data).Id);
+    tvMain.Selected.Data:= nil;
+    UpdateGUI;
+  end;
+end;
+
 procedure TfmMain.DeleteProject(Sender: TObject);
 var
   reply: word;
@@ -117,17 +135,23 @@ begin
   reply:= MessageBox(Handle, PChar('Delete project?' + #13#10), PChar('Confirm'), 36);
   if reply = IDYES then
   begin
+    tvMain.Deselect(tvMain.Selected);
     ProjectList.RemoveProjectById(Project.Id);
+    tvMain.Selected.Data:= nil;
     UpdateGUI;
   end;
+end;
+
+procedure TfmMain.EditModule(Sender: TObject);
+begin
+  if ShowModuleEditDialog(TORDESYModule(tvMain.Selected.Data)) then
+    UpdateGUI;
 end;
 
 procedure TfmMain.EditProject(Sender: TObject);
 begin
   if ShowProjectEditDialog(TORDESYProject(tvMain.Selected.Data)) then
-  begin
     UpdateGUI;
-  end;
 end;
 
 procedure TfmMain.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -192,31 +216,57 @@ end;
 
 procedure TfmMain.ViewProjects(aTreeView: TTreeView);
 
-  function GetBaseItem(const aProjectId, aModuleId, aBaseId: integer): TTreeNode;
+  function BaseInModule(const aProjectId, aModuleId, aBaseId: integer): TTreeNode;
   var
-    i, ip1, ip2: integer;
+    iP, iM, iB: integer;
     Parent1, Parent2: TTreeNode;
   begin
     Result:= nil;
-    for i := 0 to aTreeView.Items.Count - 1 do
+    for iP := 0 to aTreeView.Items.Count - 1 do
     begin
-      if (TObject(aTreeView.Items[i].Data) is TORDESYProject) and (TORDESYProject(aTreeView.Items[i].Data).Id = aProjectId) then
+      if (TObject(aTreeView.Items[iP].Data) is TORDESYProject) and (TORDESYProject(aTreeView.Items[iP].Data).Id = aProjectId) then
       begin
-        Parent1:= aTreeView.Items[i];
-        for ip1 := 0 to Parent1.Count - 1 do
-          if (TObject(Parent1.Item[ip1].Data) is TORDESYModule) and (TORDESYModule(Parent1.Item[ip1].Data).Id = aModuleId) then
+        Parent1:= aTreeView.Items[iP];
+        for iM := 0 to Parent1.Count - 1 do
+          if (TObject(Parent1.Item[iM].Data) is TORDESYModule) and (TORDESYModule(Parent1.Item[iM].Data).Id = aModuleId) then
           begin
-            Parent2:= Parent1.Item[ip1];
-            for ip2 := 0 to Parent2.Count - 1 do
-              if (TObject(Parent2.Item[ip2].Data) is TOraBase) and (TOraBase(Parent2.Item[ip2].Data).Id = aBaseId) then
-                Result:= Parent2.Item[ip2];
+            Parent2:= Parent1.Item[iM];
+            for iB := 0 to Parent2.Count - 1 do
+              if (TObject(Parent2.Item[iB].Data) is TOraBase) and (TOraBase(Parent2.Item[iB].Data).Id = aBaseId) then
+                Result:= Parent2.Item[iB];
+          end;
+      end;
+    end;
+  end;
+
+  function SchemeInBase(const aProjectId, aModuleId, aBaseId, aSchemeId: integer): TTreeNode;
+  var
+    iP, iM, iB, iSc: integer;
+    Parent1, Parent2, Parent3: TTreeNode;
+  begin
+    Result:= nil;
+    for iP := 0 to aTreeView.Items.Count - 1 do
+    begin
+      if (TObject(aTreeView.Items[iP].Data) is TORDESYProject) and (TORDESYProject(aTreeView.Items[iP].Data).Id = aProjectId) then
+      begin
+        Parent1:= aTreeView.Items[iP];
+        for iM := 0 to Parent1.Count - 1 do
+          if (TObject(Parent1.Item[iM].Data) is TORDESYModule) and (TORDESYModule(Parent1.Item[iM].Data).Id = aModuleId) then
+          begin
+            Parent2:= Parent1.Item[iM];
+            for iB := 0 to Parent2.Count - 1 do
+              if (TObject(Parent2.Item[iB].Data) is TOraBase) and (TOraBase(Parent2.Item[iB].Data).Id = aBaseId) then
+                Parent3:= Parent2.Item[iB];
+                for iSc := 0 to Parent3.Count - 1 do
+                if (TObject(Parent3.Item[iSc].Data) is TOraScheme) and (TOraScheme(Parent3.Item[iSc].Data).Id = aSchemeId) then
+                  Result:= Parent3.Item[iSc];
           end;
       end;
     end;
   end;
 
 var
-  iPL, iM, iB, iSc, Ii: integer;
+  iPL, iM, iB, iSc, iI: integer;
   iProject: TORDESYProject;
   iModule: TORDESYModule;
   iBase: TOraBase;
@@ -224,39 +274,48 @@ var
   iItem: TOraItem;
   ProjectAdded, ModuleAdded, BaseAdded, SchemeAdded, ItemAdded: TTreeNode;
 begin
-  if ProjectList.Count <= 0 then
+  aTreeView.Items.Clear;
+  if ProjectList.ProjectCount <= 0 then
     Exit;
   aTreeView.Items.BeginUpdate;
-  aTreeView.Items.Clear;
-  for iPL := 0 to ProjectList.Count - 1 do
+  for iPL := 0 to ProjectList.ProjectCount - 1 do
   begin
     iProject:= ProjectList.GetProjectByIndex(iPL);
-    ProjectAdded:= tvMain.Items.AddObject(nil, iProject.Name, iProject);
+    ProjectAdded:= aTreeView.Items.AddObject(nil, iProject.Name, iProject);
     for iM := 0 to iProject.ModuleCount - 1 do
     begin
       iModule:= iProject.GetModuleByIndex(iM);
-      ModuleAdded:= tvMain.Items.AddChildObject(ProjectAdded, iModule.Name, iModule);
-      for iSc := 0 to iProject.OraSchemeCount - 1 do
+      ModuleAdded:= aTreeView.Items.AddChildObject(ProjectAdded, iModule.Name, iModule);
+      for iI := 0 to iModule.OraItemCount - 1 do
       begin
-        iScheme:= iProject.GetOraSchemeByIndex(iSc);
-        if iScheme.ModuleId = iModule.Id then
+        iItem:= iModule.GetOraItemByIndex(iI);
+        iBase:= ProjectList.GetOraBaseById(iItem.BaseId);
+        iScheme:= ProjectList.GetOraSchemeById(iItem.SchemeId);
+        if iBase <> nil then
         begin
-          for iB := 0 to iProject.OraBaseCount - 1 do
+          BaseAdded:= BaseInModule(iProject.Id, iModule.Id, iItem.BaseId);
+          if BaseAdded = nil then
+            BaseAdded:= aTreeView.Items.AddChildObject(ModuleAdded, iBase.Name, iBase);
+          if iScheme <> nil then
           begin
-            iBase:= iProject.GetOraBaseByIndex(iB);
-            if iScheme.BaseId = iBase.Id then
-            begin
-              BaseAdded:= GetBaseItem(iProject.Id, iModule.Id, iBase.Id);
-              if not Assigned(BaseAdded) then
-                BaseAdded:= tvMain.Items.AddChildObject(ModuleAdded, iBase.Name, iBase);
-              SchemeAdded:= tvMain.Items.AddChildObject(BaseAdded, iScheme.Login, iScheme);
-            end;
-          end;
-          for Ii := 0 to iProject.OraItemCount - 1 do
+            SchemeAdded:= SchemeInBase(iProject.Id, iModule.Id, iItem.BaseId, iItem.SchemeId);
+            if SchemeAdded = nil then
+              SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, iScheme.Login, iScheme);
+            ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
+          end
+          else
           begin
-            iItem:= iProject.GetOraItemByIndex(Ii);
-            ItemAdded:= tvMain.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
+            // No such scheme in project
+            SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, '?', nil);
+            ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
           end;
+        end
+        else
+        begin
+          // No such base in project
+          BaseAdded:= aTreeView.Items.AddChildObject(ModuleAdded, '?', nil);
+          SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, '?', nil);
+          ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
         end;
       end;
     end;
@@ -264,12 +323,22 @@ begin
   aTreeView.Items.EndUpdate;
 end;
 
-procedure TfmMain.miCreateProjectClick(Sender: TObject);
+procedure TfmMain.AddModule(Sender: TObject);
+var
+  iProject: TORDESYProject;
+begin
+  if TObject(tvMain.Selected.Data) is TORDESYProject then
+    iProject:= TORDESYProject(tvMain.Selected.Data)
+  else if TObject(tvMain.Selected.Data) is TORDESYModule then
+    iProject:= TORDESYProject(TORDESYModule((tvMain.Selected.Data)).ProjectRef);
+  if ShowModuleCreateDialog(iProject) then
+    UpdateGUI;
+end;
+
+procedure TfmMain.AddProject(Sender: TObject);
 begin
   if ShowProjectCreateDialog(AppOptions.UserName, ProjectList) then
-  begin
     UpdateGUI;
-  end;
 end;
 
 procedure TfmMain.miExitClick(Sender: TObject);
@@ -290,7 +359,7 @@ begin
     ProjectList.SaveToFile();
 end;
 
-procedure TfmMain.AddBase(Sender: TObject);
+(*procedure TfmMain.AddBase(Sender: TObject);
 var
   BaseName: string;
 begin
@@ -318,44 +387,53 @@ begin
       {$ENDIF}
     end;
   end;
-end;
+end;*)
 
-function TfmMain.CanPopup(const aTag: integer; aObject: TObject): boolean;
+function TfmMain.CanPopup(const aTag: integer; aObject: Pointer): boolean;
 begin
   Result:= false;
   if aObject <> nil then
   begin
-    if (aObject is TORDESYProject) and (aTag >= 1) and (aTag <= 10) then
+    if (TObject(aObject) is TORDESYProject) and (aTag >= 0) and (aTag <= 10) then
       Result:= true;
-    if (aObject is TORDESYModule) and (aTag >= 11) and (aTag <= 20) then
+    if (TObject(aObject) is TORDESYModule) and (aTag >= 5) and (aTag <= 15) then
       Result:= true;
-    if (aObject is TOraBase) and (aTag >= 21) and (aTag <= 30) then
+    if (TObject(aObject) is TOraBase) and (aTag >= 10) and (aTag <= 20) then
       Result:= true;
-    if (aObject is TOraScheme) and (aTag >= 31) and (aTag <= 40) then
+    if (TObject(aObject) is TOraScheme) and (aTag >= 15) and (aTag <= 25) then
       Result:= True;
-    if (aObject is TOraItem) and (aTag >= 41) and (aTag <= 50) then
+    if (TObject(aObject) is TOraItem) and (aTag >= 20) and (aTag <= 30) then
       Result:= true;
-  end;
+  end
+  else
+    if aTag = 0 then
+      Result:= True;
 end;
 
 procedure TfmMain.ppmMainPopup(Sender: TObject);
 var
-  i: integer;
+  i, n: integer;
 begin
   for i := 0 to ppmMain.Items.Count - 1 do
   begin
-    if Assigned(tvMain.Selected) and (tvMain.Selected.Data <> nil) then
-    begin
-      if CanPopup(ppmMain.Items[i].Tag , TObject(tvMain.Selected.Data)) then
-        ppmMain.Items[i].Visible:= true
+    for n := 0 to ppmMain.Items[i].Count - 1 do
+      if Assigned(tvMain.Selected)  then
+      begin
+        ppmMain.Items[i].Visible:= CanPopup(ppmMain.Items[i].Tag , tvMain.Selected.Data);
+        ppmMain.Items[i].Items[n].Visible:= CanPopup(ppmMain.Items[i].Items[n].Tag , tvMain.Selected.Data);
+      end
       else
-        ppmMain.Items[i].Visible:= false;
-    end;
+      begin
+        ppmMain.Items[i].Visible:= CanPopup(ppmMain.Items[i].Tag , nil);
+        ppmMain.Items[i].Items[n].Visible:= CanPopup(ppmMain.Items[i].Items[n].Tag , nil);
+      end;
   end;
 end;
 
 procedure TfmMain.PrepareGUI;
 var
+  ProjectMenu: TMenuItem;
+  ModuleMenu: TMenuItem;
   MenuItem: TMenuItem;
 begin
   try
@@ -364,35 +442,60 @@ begin
     fmMain.Width:= strtoint(AppOptions.GetOption('GUI', 'FormWidth'));
     fmMain.Height:= strtoint(AppOptions.GetOption('GUI', 'FormHeight'));
     // -----------------------------------------Project Popup 1-10
-    MenuItem:= TMenuItem.Create(ppmMain);
-    MenuItem.OnClick:= miCreateProject.OnClick;
-    MenuItem.Caption:= 'Create project';
-    MenuItem.Tag:= 1;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
+    ProjectMenu:= TMenuItem.Create(ppmMain);
+    ProjectMenu.Caption:= 'Project';
+    ProjectMenu.Tag:= 0;
+    ppmMain.Items.Add(ProjectMenu);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= AddProject;
+      MenuItem.Caption:= 'Add project';
+      MenuItem.Tag:= 0;
+      ProjectMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= EditProject;
+      MenuItem.Caption:= 'Edit project';
+      MenuItem.Tag:= 1;
+      ProjectMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= DeleteProject;
+      MenuItem.Caption:= 'Delete project';
+      MenuItem.Tag:= 1;
+      ProjectMenu.Add(MenuItem);
     //
-    MenuItem:= TMenuItem.Create(ppmMain);
-    MenuItem.OnClick:= EditProject;
-    MenuItem.Caption:= 'Edit project';
-    MenuItem.Tag:= 2;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
-    //
-    MenuItem:= TMenuItem.Create(ppmMain);
-    MenuItem.OnClick:= DeleteProject;
-    MenuItem.Caption:= 'Delete project';
-    MenuItem.Tag:= 3;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
+    ModuleMenu:= TMenuItem.Create(ppmMain);
+    ModuleMenu.Caption:= 'Module';
+    ModuleMenu.Tag:= 5;
+    ppmMain.Items.Add(ModuleMenu);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= AddModule;
+      MenuItem.Caption:= 'Add module';
+      MenuItem.Tag:= 5;
+      ModuleMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= EditModule;
+      MenuItem.Caption:= 'Edit module';
+      MenuItem.Tag:= 11;
+      ModuleMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= DeleteModule;
+      MenuItem.Caption:= 'Delete module';
+      MenuItem.Tag:= 11;
+      ModuleMenu.Add(MenuItem);
     // -----------------------------------------Module popup 11-20
-    MenuItem:= TMenuItem.Create(ppmMain);
-    MenuItem.OnClick:= AddBase;
+    {MenuItem:= TMenuItem.Create(ppmMain);
+    MenuItem.OnClick:= AddModule;
     MenuItem.Caption:= 'Add base';
     MenuItem.Tag:= 11;
     MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
+    ppmMain.Items.Add(MenuItem);}
     // -----------------------------------------Base popup 21-30
-    MenuItem:= TMenuItem.Create(ppmMain);
+    {MenuItem:= TMenuItem.Create(ppmMain);
     MenuItem.OnClick:= AddBase;
     MenuItem.Caption:= 'Add base';
     MenuItem.Tag:= 21;
@@ -411,9 +514,9 @@ begin
     MenuItem.Caption:= 'Delete base';
     MenuItem.Tag:= 23;
     MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
+    ppmMain.Items.Add(MenuItem);}
     // -----------------------------------------Scheme popup 31-40
-    MenuItem:= TMenuItem.Create(ppmMain);
+    {MenuItem:= TMenuItem.Create(ppmMain);
     //MenuItem.OnClick:= miCreateProject.OnClick;
     MenuItem.Caption:= 'Add scheme';
     MenuItem.Tag:= 31;
@@ -439,7 +542,7 @@ begin
     MenuItem.Caption:= 'Delete scheme';
     MenuItem.Tag:= 34;
     MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
+    ppmMain.Items.Add(MenuItem);}
   except
     on E: Exception do
     begin
@@ -494,22 +597,29 @@ begin
     //
     //TEST
     {iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'BIG PROJECT');
-    //ShowMessage(BoolToStr(Assigned(iProject), true));
     iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module1', 'DESCRIPTION1'));
     iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module2', 'DESCRIPTION2'));
     iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module3', 'DESCRIPTION3'));
-    iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module4', 'DESCRIPTION4'));
-    iProject.AddOraBase(TOraBase.Create(iProject.GetFreeBaseId, 'Some BASE _ 1'));
-    iProject.AddOraBase(TOraBase.Create(iProject.GetFreeBaseId, 'Some BASE _ 2'));
-    iProject.AddOraScheme(TOraScheme.Create(iProject, iProject.GetFreeSchemeId, 'Scheme of SOME BASE', 'pass', iProject.GetFreeBaseId - 1, iProject.GetFreeModuleId - 1));
-    iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PROC_1', 'procedure', OraProcedure));
-    iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'FUNC_1', 'function', OraFunction));
-    iProject.AddOraItem(TOraItem.Create(iProject.GetFreeItemId, iProject.GetFreeSchemeId - 1, 'PACK_1', 'package', OraPackage));
+    iModule:= TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module4', 'DESCRIPTION4');
+    iProject.AddModule(iModule);
+
+    ProjectList.AddOraBase(TOraBase.Create(ProjectList ,ProjectList.GetFreeBaseId, 'Some BASE _ 1'));
+    iBase:= TOraBase.Create(ProjectList ,ProjectList.GetFreeBaseId, 'Some BASE _ 2');
+    ProjectList.AddOraBase(iBase);
+    iScheme:= TOraScheme.Create(ProjectList, ProjectList.GetFreeSchemeId, 'Scheme of SOME BASE', 'pass');
+    ProjectList.AddOraScheme(iScheme);
+
+    iModule.AddOraItem(TOraItem.Create(iModule, iModule.GetFreeItemId, iBase.Id, iScheme.Id, 'PROC_1', 'procedure', OraProcedure));
+    iModule.AddOraItem(TOraItem.Create(iModule, iModule.GetFreeItemId, iBase.Id, iScheme.Id, 'FUNC_1', 'function', OraFunction));
+    iModule.AddOraItem(TOraItem.Create(iModule, iModule.GetFreeItemId, iBase.Id, iScheme.Id, 'PACK_1', 'package', OraPackage));
+
     ProjectList.AddProject(iProject);}
-    //ShowMessage(inttostr(ProjectList.GetProjectByIndex(0).OraBaseCount));
+
+    //ShowMessage(ProjectList.GetProjectByIndex(0).GetModuleByIndex(2).GetOraItemByIndex(2).Name);
+    //ShowMessage(inttostr(ProjectList.GetProjectByIndex(0).GetModuleByIndex(3).OraItemCount));
     //END TEST
     ViewProjects(tvMain);
-    ShowMessage(ProjectList.GetProjectByIndex(0).GetOraItemByIndex(0).Name);
+    //ShowMessage(ProjectList.GetProjectByIndex(0).GetOraItemByIndex(0).Name);
   except
     on E: Exception do
     begin
@@ -530,7 +640,7 @@ end;
 
 procedure TfmMain.tvMainClick(Sender: TObject);
 begin
-  if Assigned(tvMain.Selected) then
+  if Assigned(tvMain.Selected) and (tvMain.Selected.Data <> nil) then
     if TObject(tvMain.Selected.Data) is TORDESYProject then
     begin
       edName.Text:= TORDESYProject(tvMain.Selected.Data).Name;
@@ -595,7 +705,9 @@ begin
       if Node.HasChildren and Node.Expanded then
         Node.ImageIndex:= 59
       else
-        Node.ImageIndex:= 58;
+        Node.ImageIndex:= 58
+    else if (Node.Data = nil) and (Node.Text = '?') then
+      Node.ImageIndex:= 0;
   except
     on E: Exception do
     begin
@@ -625,10 +737,13 @@ begin
 end;
 
 procedure TfmMain.WrapItem(Sender: TObject);
+var
+  iModule: TORDESYModule;
 begin
-  with TOraScheme(tvMain.Selected.Data) do
+  iModule:= TORDESYModule(tvMain.Selected.Data);
+  with iModule do
   begin
-    if ShowWrapDialog(Id, ProjectList.GetProjectById(GetProjectId(ProjectList))) then
+    if ShowWrapDialog(iModule, ProjectList) then
   end;
 end;
 

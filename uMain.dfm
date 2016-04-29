@@ -45,8 +45,12 @@ object fmMain: TfmMain
       Width = 217
       Height = 347
       Align = alLeft
+      DoubleBuffered = True
+      HideSelection = False
       Images = imlMain
       Indent = 19
+      MultiSelectStyle = []
+      ParentDoubleBuffered = False
       PopupMenu = ppmMain
       ReadOnly = True
       SortType = stText
@@ -184,58 +188,58 @@ object fmMain: TfmMain
     end
     object miProject: TMenuItem
       Caption = 'Project'
-      object miCreateProject: TMenuItem
-        Caption = 'Create project'
-        OnClick = miCreateProjectClick
+      object miAddProject: TMenuItem
+        Caption = 'Add project'
+        OnClick = AddProject
       end
-      object miProjectOptions: TMenuItem
-        Caption = 'Project options'
+      object miEditProject: TMenuItem
+        Caption = 'Edit project'
+      end
+      object miModule: TMenuItem
+        Caption = 'Module'
+        object AddModule1: TMenuItem
+          Caption = 'Add Module'
+        end
+        object miModuleList: TMenuItem
+          Caption = 'Module List'
+        end
+      end
+      object miItem: TMenuItem
+        Caption = 'Item'
+        object miWrapItem: TMenuItem
+          Caption = 'Wrap item'
+        end
+        object miDeployItem: TMenuItem
+          Caption = 'Deploy Item'
+        end
+        object miItemList: TMenuItem
+          Caption = 'Item list'
+        end
       end
       object miShow: TMenuItem
-        Caption = 'Show'
+        Caption = 'Show projects'
         object miShowAll: TMenuItem
           Caption = 'All'
           Checked = True
         end
       end
     end
-    object miModule: TMenuItem
-      Caption = 'Module'
-      object miCreateModule: TMenuItem
-        Caption = 'Create module'
-      end
-      object miEditModule: TMenuItem
-        Caption = 'Module options'
-      end
-    end
     object miBase: TMenuItem
       Caption = 'Base'
-      object miCreateBase: TMenuItem
-        Caption = 'Create base'
+      object miAddBase: TMenuItem
+        Caption = 'Add base'
       end
-      object miEditBase: TMenuItem
-        Caption = 'Base options'
+      object miBaseList: TMenuItem
+        Caption = 'Base list'
       end
     end
     object miScheme: TMenuItem
       Caption = 'Scheme'
-      object miCreateScheme: TMenuItem
-        Caption = 'Create scheme'
+      object miAddScheme: TMenuItem
+        Caption = 'Add scheme'
       end
-      object miEditScheme: TMenuItem
-        Caption = 'Scheme options'
-      end
-    end
-    object miItem: TMenuItem
-      Caption = 'Item'
-      object miCreateItem: TMenuItem
-        Caption = 'Create item'
-      end
-      object miEditItem: TMenuItem
-        Caption = 'Object options'
-      end
-      object miWrapItem: TMenuItem
-        Caption = 'Wrap item'
+      object miSchemeList: TMenuItem
+        Caption = 'Scheme list'
       end
     end
     object miLast: TMenuItem

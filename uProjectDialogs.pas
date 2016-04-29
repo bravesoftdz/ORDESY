@@ -1,4 +1,4 @@
-unit uProject;
+unit uProjectDialogs;
 
 interface
 
@@ -27,6 +27,8 @@ type
 
 function ShowProjectCreateDialog(const aCreator: string; var aProjectList: TORDESYProjectList): boolean;
 function ShowProjectEditDialog(aProject: TORDESYProject): boolean;
+function ShowModuleCreateDialog(aProject: TORDESYProject): boolean;
+function ShowModuleEditDialog(aModule: TORDESYModule): boolean;
 
 implementation
 
@@ -45,10 +47,6 @@ begin
       dTimer.OnTimer:= UpdateCurrentDateTime;
       if ShowModal = mrOk then
       begin
-        if (edtProjectName.Text = '') or (length(edtProjectName.Text) > 255) then
-          raise Exception.Create('Incorrect project name, empty or more than 255 characters!');
-        if (length(mmDescription.Text) > 1000) then
-          raise Exception.Create('Incorrect project description, more than 1000 characters!');
         aProjectList.AddProject(TORDESYProject.Create(aProjectList.GetFreeProjectId, edtProjectName.Text, mmDescription.Text, lblCreator.Caption));
         Result:= true;
       end;
@@ -59,8 +57,6 @@ begin
 end;
 
 function ShowProjectEditDialog(aProject: TORDESYProject): boolean;
-label
-  check;
 begin
   with TfmProjectCreate.Create(Application) do
     try
@@ -72,12 +68,51 @@ begin
       lblDateCreate.Caption:= FormatDateTime('c', aProject.DateCreate);
       lblDateCreate.Visible:= true;
       btnCreate.Caption:= 'Save';
-      check:
       if ShowModal = mrOk then
       begin
         aProject.Name:= edtProjectName.Text;
         aProject.Description:= mmDescription.Text;
         aProject.Creator:= lblCreator.Caption;
+        Result:= true;
+      end;
+    finally
+      Free;
+    end;
+end;
+
+function ShowModuleCreateDialog(aProject: TORDESYProject): boolean;
+begin
+  with TfmProjectCreate.Create(Application) do
+    try
+      Result:= false;
+      Caption:= 'Add module';
+      lblCreatorHead.Visible:= false;
+      lblDate.Visible:= false;
+      if ShowModal = mrOk then
+      begin
+        aProject.AddModule(TORDESYModule.Create(aProject, aProject.GetFreeModuleId, edtProjectName.Text, mmDescription.Text));
+        Result:= true;
+      end;
+    finally
+      Free;
+    end;
+end;
+
+function ShowModuleEditDialog(aModule: TORDESYModule): boolean;
+begin
+  with TfmProjectCreate.Create(Application) do
+    try
+      Result:= false;
+      Caption:= 'Edit module';
+      edtProjectName.Text:= aModule.Name;
+      mmDescription.Text:= aModule.Description;
+      lblCreator.Visible:= false;
+      lblDate.Visible:= false;
+      btnCreate.Caption:= 'Save';
+      if ShowModal = mrOk then
+      begin
+        aModule.Name:= edtProjectName.Text;
+        aModule.Description:= mmDescription.Text;
         Result:= true;
       end;
     finally
