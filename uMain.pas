@@ -87,6 +87,7 @@ type
     procedure AddModule(Sender: TObject);
     procedure EditModule(Sender: TObject);
     procedure DeleteModule(Sender: TObject);
+    procedure AddBase(Sender: TObject);
     procedure tvMainClick(Sender: TObject);
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
@@ -359,7 +360,7 @@ begin
     ProjectList.SaveToFile();
 end;
 
-(*procedure TfmMain.AddBase(Sender: TObject);
+procedure TfmMain.AddBase(Sender: TObject);
 var
   BaseName: string;
 begin
@@ -368,12 +369,8 @@ begin
     begin
       if (BaseName <> '') and (Length(BaseName) <= 255) then
       begin
-        if (TObject(tvMain.Selected.Data) is TORDESYModule) then
-          with TORDESYProject(TORDESYModule(tvMain.Selected.Data).ProjectRef) do
-          begin
-            AddOraBase(TOraBase.Create(GetFreeBaseId, BaseName));
-            UpdateGUI;
-          end;
+        ProjectList.AddOraBase(TOraBase.Create(ProjectList ,ProjectList.GetFreeBaseId, BaseName));
+        UpdateGUI;
       end;
     end;
   except
@@ -387,7 +384,7 @@ begin
       {$ENDIF}
     end;
   end;
-end;*)
+end;
 
 function TfmMain.CanPopup(const aTag: integer; aObject: Pointer): boolean;
 begin
@@ -434,6 +431,7 @@ procedure TfmMain.PrepareGUI;
 var
   ProjectMenu: TMenuItem;
   ModuleMenu: TMenuItem;
+  BaseMenu: TMenuItem;
   MenuItem: TMenuItem;
 begin
   try
@@ -487,6 +485,23 @@ begin
       MenuItem.Caption:= 'Delete module';
       MenuItem.Tag:= 11;
       ModuleMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= WrapItem;
+      MenuItem.Caption:= 'Wrap item';
+      MenuItem.Tag:= 11;
+      ModuleMenu.Add(MenuItem);
+    //
+    BaseMenu:= TMenuItem.Create(ppmMain);
+    BaseMenu.Caption:= 'Base';
+    BaseMenu.Tag:= 0;
+    ppmMain.Items.Add(BaseMenu);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= AddBase;
+      MenuItem.Caption:= 'Add base';
+      MenuItem.Tag:= 0;
+      BaseMenu.Add(MenuItem);
     // -----------------------------------------Module popup 11-20
     {MenuItem:= TMenuItem.Create(ppmMain);
     MenuItem.OnClick:= AddModule;
@@ -737,14 +752,8 @@ begin
 end;
 
 procedure TfmMain.WrapItem(Sender: TObject);
-var
-  iModule: TORDESYModule;
 begin
-  iModule:= TORDESYModule(tvMain.Selected.Data);
-  with iModule do
-  begin
-    if ShowWrapDialog(iModule, ProjectList) then
-  end;
+  ShowWrapDialog(TORDESYModule(tvMain.Selected.Data), ProjectList);
 end;
 
 end.

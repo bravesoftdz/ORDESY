@@ -24,8 +24,6 @@ object fmWrap: TfmWrap
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitWidth = 526
-    ExplicitHeight = 539
     DesignSize = (
       445
       421)
@@ -100,7 +98,6 @@ object fmWrap: TfmWrap
         'PROCEDURE'
         'FUNCTION'
         'PACKAGE')
-      ExplicitWidth = 257
     end
     object lbxList: TListBox
       Left = 8
@@ -111,8 +108,6 @@ object fmWrap: TfmWrap
       ItemHeight = 13
       TabOrder = 1
       OnDrawItem = lbxListDrawItem
-      ExplicitWidth = 541
-      ExplicitHeight = 401
     end
     object btnUpdate: TButton
       Left = 199
@@ -121,11 +116,8 @@ object fmWrap: TfmWrap
       Height = 25
       Anchors = [akRight, akBottom]
       Caption = 'Update'
-      ModalResult = 4
       TabOrder = 2
       OnClick = btnUpdateClick
-      ExplicitLeft = 289
-      ExplicitTop = 457
     end
     object btnWrap: TButton
       Left = 280
@@ -137,8 +129,6 @@ object fmWrap: TfmWrap
       Default = True
       ModalResult = 1
       TabOrder = 3
-      ExplicitLeft = 370
-      ExplicitTop = 457
     end
     object btnClose: TButton
       Left = 361
@@ -150,25 +140,6 @@ object fmWrap: TfmWrap
       ModalResult = 11
       TabOrder = 4
       OnClick = btnCloseClick
-      ExplicitLeft = 451
-      ExplicitTop = 457
-    end
-    object cbxBaseList: TComboBox
-      Left = 8
-      Top = 27
-      Width = 150
-      Height = 21
-      Style = csDropDownList
-      TabOrder = 5
-      OnSelect = cbxBaseListSelect
-    end
-    object cbxSchemeList: TComboBox
-      Left = 162
-      Top = 27
-      Width = 150
-      Height = 21
-      Style = csDropDownList
-      TabOrder = 6
     end
   end
 end

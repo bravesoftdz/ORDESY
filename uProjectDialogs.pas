@@ -106,7 +106,7 @@ begin
       Caption:= 'Edit module';
       edtProjectName.Text:= aModule.Name;
       mmDescription.Text:= aModule.Description;
-      lblCreator.Visible:= false;
+      lblCreatorHead.Visible:= false;
       lblDate.Visible:= false;
       btnCreate.Caption:= 'Save';
       if ShowModal = mrOk then

@@ -13,6 +13,11 @@ uses
   Dialogs, StdCtrls, ExtCtrls;
 
 type
+  TWrapComboBox = class(TComboBox)
+  protected
+    procedure WM_CB_SETCURSEL(var Message: TMessage); message CB_SETCURSEL;
+  end;
+
   TfmWrap = class(TForm)
     cbxItemType: TComboBox;
     lblItemType: TLabel;
@@ -25,8 +30,6 @@ type
     lblModule: TLabel;
     lblBase: TLabel;
     lblScheme: TLabel;
-    cbxBaseList: TComboBox;
-    cbxSchemeList: TComboBox;
     lblBaseList: TLabel;
     lblSchemeList: TLabel;
     procedure btnCloseClick(Sender: TObject);
@@ -35,6 +38,8 @@ type
     procedure lbxListDrawItem(Control: TWinControl; Index: Integer; Rect: TRect;
       State: TOwnerDrawState);
     procedure cbxBaseListSelect(Sender: TObject);
+    procedure cbxSchemeListSelect(Sender: TObject);
+    procedure PrepareGUI;
   private
     CurrentProject: TORDESYProject;
     CurrentBase: TOraBase;
@@ -56,24 +61,39 @@ uses
 function ShowWrapDialog(aModule: TORDESYModule; aProjectList: TORDESYProjectList): boolean;
 var
   iScheme: TOraScheme;
-  i: integer;
+  iWrapBase, iWrapScheme: TWrapComboBox;
+  i, n: integer;
 begin
   with TfmWrap.Create(Application) do
     try
       Result:= false;
+      PrepareGUI;
       CurrentProject:= TORDESYProject(aModule.ProjectRef);
+      for n := 0 to pnlMain.ControlCount - 1 do
+      begin
+        if (pnlMain.Controls[n] is TWrapComboBox) and (TWrapComboBox(pnlMain.Controls[n]).Name = 'cbxWrapBase') then
+          iWrapBase:= TWrapComboBox(pnlMain.Controls[n]);
+        if (pnlMain.Controls[n] is TWrapComboBox) and (TWrapComboBox(pnlMain.Controls[n]).Name = 'cbxWrapScheme') then
+          iWrapScheme:= TWrapComboBox(pnlMain.Controls[n]);
+      end;
       for i := 0 to aProjectList.OraBaseCount - 1 do
-        cbxBaseList.Items.AddObject(aProjectList.GetOraBaseByIndex(i).Name, aProjectList.GetOraBaseByIndex(i));
+        iWrapBase.Items.AddObject(aProjectList.GetOraBaseName(i), aProjectList.GetOraBaseByIndex(i));
+      if iWrapBase.Items.Count <> 0 then
+        iWrapBase.ItemIndex:= 0;
       for i := 0 to aProjectList.OraSchemeCount - 1 do
-        cbxSchemeList.Items.AddObject(aProjectList.GetOraSchemeByIndex(i).Login, aProjectList.GetOraSchemeByIndex(i));
-      {lblProject.Caption:= 'Project: ' + aProject.Name;
-      lblModule.Caption:= 'Module: ' + aProject.GetModuleById(aProject.GetOraSchemeById(SchemeId).ModuleId).Name;
-      lblBase.Caption:= 'Base: ' + aProject.GetOraBaseById(aProject.GetOraSchemeById(SchemeId).BaseId).Name;
-      lblScheme.Caption:= 'Scheme: ' + aProject.GetOraSchemeById(SchemeId).Login;}
+        iWrapScheme.Items.AddObject(aProjectList.GetOraSchemeLogin(i), aProjectList.GetOraSchemeByIndex(i));
+      if iWrapScheme.Items.Count <> 0 then
+        iWrapScheme.ItemIndex:= 0;
+      lblProject.Caption:= 'Project: ' + CurrentProject.Name;
+      lblModule.Caption:= 'Module: ' + aModule.Name;
+      if Assigned(CurrentBase) then
+        lblBase.Caption:= 'Base: ' + CurrentBase.Name;
+      if Assigned(CurrentScheme) then
+        lblScheme.Caption:= 'Scheme: ' + CurrentScheme.Login;
       if ShowModal = mrOk then
       begin
         try
-          CurrentProject.WrapItem(aModule.Id, TOraBase(cbxBaseList.Items.Objects[cbxBaseList.ItemIndex]).Id, TOraScheme(cbxSchemeList.Items.Objects[cbxSchemeList.ItemIndex]).Id, lbxList.Items.Strings[lbxList.ItemIndex], TOraItem.GetItemType(cbxItemType.Items[cbxItemType.ItemIndex]));
+          CurrentProject.WrapItem(aModule.Id, CurrentBase.Id, CurrentScheme.Id, lbxList.Items.Strings[lbxList.ItemIndex], TOraItem.GetItemType(cbxItemType.Items[cbxItemType.ItemIndex]));
           Result:= true;
         except
           on E: Exception do
@@ -99,17 +119,41 @@ end;
 
 procedure TfmWrap.btnUpdateClick(Sender: TObject);
 begin
+  try
   if Assigned(CurrentProject) and Assigned(CurrentBase) and Assigned(CurrentScheme) then
   begin
     CurrentScheme.Connect(CurrentBase.Id);
     CurrentScheme.GetItemList(TOraItem.GetItemType(cbxItemType.Items[cbxItemType.ItemIndex]), lbxList.Items);
   end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | btnUpdateClick | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | btnUpdateClick | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
 end;
 
 procedure TfmWrap.cbxBaseListSelect(Sender: TObject);
 begin
-  if (cbxBaseList.Items.Count > 0) and (cbxBaseList.Items.Objects[cbxBaseList.ItemIndex] <> nil) and (TObject(cbxBaseList.Items.Objects[cbxBaseList.ItemIndex]) is TOraBase) then
-    CurrentBase:= TOraBase(cbxBaseList.Items.Objects[cbxBaseList.ItemIndex]);
+  if (Sender is TWrapComboBox) and (TWrapComboBox(Sender).Items.Count > 0) and (TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex] <> nil) and (TObject(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]) is TOraBase) then
+  begin
+    CurrentBase:= TOraBase(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]);
+    lblBase.Caption:= 'Base: ' + CurrentBase.Name;
+  end;
+end;
+
+procedure TfmWrap.cbxSchemeListSelect(Sender: TObject);
+begin
+  if (Sender is TWrapComboBox) and (TWrapComboBox(Sender).Items.Count > 0) and (TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex] <> nil) and (TObject(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]) is TOraScheme) then
+  begin
+    CurrentScheme:= TOraScheme(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]);
+    lblScheme.Caption:= 'Scheme: ' + CurrentScheme.Login;
+  end;
 end;
 
 procedure TfmWrap.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -151,6 +195,44 @@ begin
       NotValidIcon.Free;
     end;
   end;
+end;
+
+procedure TfmWrap.PrepareGUI;
+var
+  cbxWrapBase: TWrapComboBox;
+  cbxWrapScheme: TWrapComboBox;
+begin
+  cbxWrapBase:= TWrapComboBox.Create(Self);
+  cbxWrapBase.Anchors:= [akLeft, akTop];
+  cbxWrapBase.Name:= 'cbxWrapBase';
+  cbxWrapBase.OnChange:= cbxBaseListSelect;
+  cbxWrapBase.Left:= 8;
+  cbxWrapBase.Top:= 27;
+  cbxWrapBase.Width:= 150;
+  cbxWrapBase.Height:= 21;
+  cbxWrapBase.Style:= csDropDownList;
+  cbxWrapBase.Visible:= true;
+  cbxWrapBase.Parent:= pnlMain;
+  //
+  cbxWrapScheme:= TWrapComboBox.Create(Self);
+  cbxWrapScheme.Anchors:= [akLeft, akTop];
+  cbxWrapScheme.Name:= 'cbxWrapScheme';
+  cbxWrapScheme.OnChange:= cbxSchemeListSelect;
+  cbxWrapScheme.Left:= 162;
+  cbxWrapScheme.Top:= 27;
+  cbxWrapScheme.Width:= 150;
+  cbxWrapScheme.Height:= 21;
+  cbxWrapScheme.Style:= csDropDownList;
+  cbxWrapScheme.Visible:= true;
+  cbxWrapScheme.Parent:= pnlMain;
+end;
+
+{ TWrapComboBox }
+
+procedure TWrapComboBox.WM_CB_SETCURSEL(var Message: TMessage);
+begin
+  inherited;
+  OnChange(Self);
 end;
 
 end.

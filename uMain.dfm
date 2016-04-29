@@ -208,6 +208,7 @@ object fmMain: TfmMain
         Caption = 'Item'
         object miWrapItem: TMenuItem
           Caption = 'Wrap item'
+          OnClick = WrapItem
         end
         object miDeployItem: TMenuItem
           Caption = 'Deploy Item'
@@ -228,6 +229,7 @@ object fmMain: TfmMain
       Caption = 'Base'
       object miAddBase: TMenuItem
         Caption = 'Add base'
+        OnClick = AddBase
       end
       object miBaseList: TMenuItem
         Caption = 'Base list'
