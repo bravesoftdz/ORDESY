@@ -10,7 +10,8 @@ uses
   uProjectDialogs in 'uProjectDialogs.pas' {fmProject},
   uOptions in 'uOptions.pas',
   uHash in 'uHash.pas',
-  uWrap in 'uWrap.pas' {fmWrap};
+  uWrap in 'uWrap.pas', {fmWrap}
+  uBaseList in 'uBaseList.pas' {fmBaseList};
 
 {$R *.res}
 

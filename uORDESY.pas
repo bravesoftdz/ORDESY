@@ -214,11 +214,13 @@ type
     function GetOraBaseById(const aId: integer): TOraBase;
     function GetOraBaseByIndex(const aIndex: integer): TOraBase;
     function GetOraBaseName(const aIndex: integer): string;
+    function RemoveBaseById(const aId: integer): Boolean;
     // Scheme
     procedure AddOraScheme(aScheme: TOraScheme);
     function GetOraSchemeById(const aId: integer): TOraScheme;
     function GetOraSchemeByIndex(const aIndex: integer): TOraScheme;
     function GetOraSchemeLogin(const aIndex: integer): string;
+    function RemoveSchemeById(const aId: integer): Boolean;
     //
     function GetFreeProjectId: integer;
     function GetFreeBaseId: integer;
@@ -1031,7 +1033,8 @@ end;
 procedure TOraBase.SetName(const Value: string);
 begin
   FName := Value;
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    FOnChange(Self);
 end;
 
 { TORDESYProjectList }
@@ -1319,6 +1322,11 @@ begin
   FSaved := false;
 end;
 
+function TORDESYProjectList.RemoveBaseById(const aId: integer): Boolean;
+begin
+ //
+end;
+
 function TORDESYProjectList.RemoveProjectById(const aId: integer): boolean;
 begin
   Result:= false;
@@ -1334,6 +1342,11 @@ begin
       OnChange(Self);
     Result:= true;
   end;
+end;
+
+function TORDESYProjectList.RemoveSchemeById(const aId: integer): Boolean;
+begin
+  //
 end;
 
 function TORDESYProjectList.SaveToFile(const aFileName: string): boolean;

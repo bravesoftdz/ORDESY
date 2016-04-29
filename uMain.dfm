@@ -233,6 +233,7 @@ object fmMain: TfmMain
       end
       object miBaseList: TMenuItem
         Caption = 'Base list'
+        OnClick = miBaseListClick
       end
     end
     object miScheme: TMenuItem

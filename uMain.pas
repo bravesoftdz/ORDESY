@@ -24,7 +24,7 @@ uses
   {$IFDEF Debug}
   uLog,
   {$ENDIF}
-  uORDESY, uExplode, uShellFuncs, uProjectDialogs, uOptions, uWrap,
+  uORDESY, uExplode, uShellFuncs, uProjectDialogs, uOptions, uWrap, uBaseList,
   // Delphi Modules
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, ToolWin, ImgList, Buttons;
@@ -88,9 +88,12 @@ type
     procedure EditModule(Sender: TObject);
     procedure DeleteModule(Sender: TObject);
     procedure AddBase(Sender: TObject);
+    procedure OnEditBase(Sender: TObject);
+    procedure EditBase(aBase: TOraBase);
     procedure tvMainClick(Sender: TObject);
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
+    procedure miBaseListClick(Sender: TObject);
   private
     AppOptions: TOptions;
     ProjectList: TORDESYProjectList;
@@ -140,6 +143,33 @@ begin
     ProjectList.RemoveProjectById(Project.Id);
     tvMain.Selected.Data:= nil;
     UpdateGUI;
+  end;
+end;
+
+procedure TfmMain.EditBase(aBase: TOraBase);
+var
+  BaseName: string;
+begin
+  try
+    BaseName:= aBase.Name;
+    if InputQuery('Edit base', 'Change base name:', BaseName) then
+    begin
+      if (BaseName <> '') and (Length(BaseName) <= 255) then
+      begin
+        aBase.Name:= BaseName;
+        UpdateGUI;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | AddBase | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | AddBase | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
   end;
 end;
 
@@ -342,6 +372,11 @@ begin
     UpdateGUI;
 end;
 
+procedure TfmMain.miBaseListClick(Sender: TObject);
+begin
+  ShowBaseListDialog(ProjectList);
+end;
+
 procedure TfmMain.miExitClick(Sender: TObject);
 begin
   fmMain.Close;
@@ -358,6 +393,11 @@ procedure TfmMain.miSavechangesClick(Sender: TObject);
 begin
   if Assigned(ProjectList) then
     ProjectList.SaveToFile();
+end;
+
+procedure TfmMain.OnEditBase(Sender: TObject);
+begin
+  //
 end;
 
 procedure TfmMain.AddBase(Sender: TObject);
@@ -501,6 +541,12 @@ begin
       MenuItem.OnClick:= AddBase;
       MenuItem.Caption:= 'Add base';
       MenuItem.Tag:= 0;
+      BaseMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      //MenuItem.OnClick:= EditBase;
+      MenuItem.Caption:= 'Edit base';
+      MenuItem.Tag:= 16;
       BaseMenu.Add(MenuItem);
     // -----------------------------------------Module popup 11-20
     {MenuItem:= TMenuItem.Create(ppmMain);
