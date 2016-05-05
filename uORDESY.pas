@@ -199,6 +199,10 @@ type
     FOnProjectAdd: TNotifyEvent;
     FOnProjectRemove: TNotifyEvent;
     FOnChange: TNotifyEvent;
+    FOnBaseAdd: TNotifyEvent;
+    FOnBaseRemove: TNotifyEvent;
+    FOnSchemeAdd: TNotifyEvent;
+    FOnSchemeRemove: TNotifyEvent;
     procedure Clear;
     function GetProjectsCount: integer;
     function GetOraBaseCount: integer;
@@ -208,25 +212,28 @@ type
     constructor Create;
     destructor Destroy; override;
     procedure AddProject(aProject: TORDESYProject);
+    function GetProjectByIndex(const aIndex: integer): TORDESYProject;
+    function GetProjectById(const aId: integer): TORDESYProject;
     function RemoveProjectById(const aId: integer): boolean;
+    function RemoveProjectByIndex(const aIndex: integer): boolean;
     // Base
     procedure AddOraBase(aBase: TOraBase);
     function GetOraBaseById(const aId: integer): TOraBase;
     function GetOraBaseByIndex(const aIndex: integer): TOraBase;
     function GetOraBaseName(const aIndex: integer): string;
     function RemoveBaseById(const aId: integer): Boolean;
+    function RemoveBaseByIndex(const aIndex: integer): boolean;
     // Scheme
     procedure AddOraScheme(aScheme: TOraScheme);
     function GetOraSchemeById(const aId: integer): TOraScheme;
     function GetOraSchemeByIndex(const aIndex: integer): TOraScheme;
     function GetOraSchemeLogin(const aIndex: integer): string;
     function RemoveSchemeById(const aId: integer): Boolean;
+    function RemoveSchemeByIndex(const aIndex: integer): boolean;
     //
     function GetFreeProjectId: integer;
     function GetFreeBaseId: integer;
     function GetFreeSchemeId: integer;
-    function GetProjectByIndex(const aIndex: integer): TORDESYProject;
-    function GetProjectById(const aId: integer): TORDESYProject;
     function LoadFromFile(const aFileName: string = 'ORDESY.data'): boolean;
     function SaveToFile(const aFileName: string = 'ORDESY.data'): boolean;
     property ProjectCount: integer read GetProjectsCount;
@@ -236,6 +243,10 @@ type
     property OnProjectRemove
       : TNotifyEvent read FOnProjectRemove write FOnProjectRemove;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
+    property OnBaseAdd: TNotifyEvent read FOnBaseAdd write FOnBaseAdd;
+    property OnBaseRemove: TNotifyEvent read FOnBaseRemove write FOnBaseRemove;
+    property OnSchemeAdd: TNotifyEvent read FOnSchemeAdd write FOnSchemeAdd;
+    property OnSchemeRemove: TNotifyEvent read FOnSchemeRemove write FOnSchemeRemove;
     property OraBaseCount: integer read GetOraBaseCount;
     property OraSchemeCount: integer read GetOraSchemeCount;
   end;
@@ -289,6 +300,8 @@ begin
   end;
   SetLength(FOraBases, length(FOraBases) + 1);
   FOraBases[ high(FOraBases)] := aBase;
+  if Assigned(FOnBaseAdd) then
+    OnBaseAdd(Self);
   if Assigned(FOnChange) then
     OnChange(Self);
 end;
@@ -319,6 +332,8 @@ begin
   end;
   SetLength(FOraSchemes, length(FOraSchemes) + 1);
   FOraSchemes[ high(FOraSchemes)] := aScheme;
+  if Assigned(FOnSchemeAdd) then
+    OnSchemeAdd(Self);
   if Assigned(FOnChange) then
     OnChange(Self);
 end;
@@ -1304,15 +1319,15 @@ begin
   except
     on E: Exception do
     begin
-{$IFDEF Debug}
+      {$IFDEF Debug}
       AddToLog(ClassName + ' | LoadFromFile | ' + E.Message);
       MessageBox(Application.Handle, PChar
           (ClassName + ' | LoadFromFile | ' + E.Message), PChar
           (Application.Title + ' - Error'), 48);
-{$ELSE}
+      {$ELSE}
       MessageBox(Application.Handle, PChar(E.Message), PChar
           (Application.Title + ' - Error'), 48);
-{$ENDIF}
+      {$ENDIF}
     end;
   end;
 end;
@@ -1323,30 +1338,229 @@ begin
 end;
 
 function TORDESYProjectList.RemoveBaseById(const aId: integer): Boolean;
+var
+  iBase: TOraBase;
+  i: integer;
 begin
- //
+  Result:= false;
+  try
+    iBase:= GetOraBaseById(aId);
+    if iBase <> nil then
+    begin
+      for i := 0 to OraBaseCount - 1 do
+      begin
+        if FOraBases[i] = iBase then
+        begin
+          FOraBases[i].Free;
+          FOraBases[i]:= FOraBases[ high(FOraBases)];
+          SetLength(FOraBases, length(FOraBases) - 1);
+          FSaved := false;
+          if Assigned(FOnBaseRemove) then
+            OnBaseRemove(Self);
+          if Assigned(FOnChange) then
+            OnChange(Self);
+          Result:= true;
+          Exit;
+        end;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | RemoveBaseById | ' + E.Message);
+      MessageBox(Application.Handle, PChar
+          (ClassName + ' | RemoveBaseById | ' + E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
+end;
+
+function TORDESYProjectList.RemoveBaseByIndex(const aIndex: integer): boolean;
+begin
+  Result:= false;
+  try
+    if (aIndex >= 0) and (aIndex < OraBaseCount) then
+    begin
+      FOraBases[aIndex].Free;
+      FOraBases[aIndex]:= FOraBases[ high(FOraBases)];
+      SetLength(FOraBases, length(FOraBases) - 1);
+      FSaved := false;
+      if Assigned(FOnBaseRemove) then
+        OnBaseRemove(Self);
+      if Assigned(FOnChange) then
+        OnChange(Self);
+      Result:= true;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | RemoveSchemeByIndex | ' + E.Message);
+      MessageBox(Application.Handle, PChar
+          (ClassName + ' | RemoveSchemeByIndex | ' + E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
 end;
 
 function TORDESYProjectList.RemoveProjectById(const aId: integer): boolean;
+var
+  iProject: TORDESYProject;
+  i: integer;
 begin
   Result:= false;
-  if GetProjectById(aId) <> nil then
-  begin
-    FProjects[aId].Free;
-    FProjects[aId]:= FProjects[ high(FProjects)];
-    SetLength(FProjects, length(FProjects) - 1);
-    FSaved := false;
-    if Assigned(FOnProjectRemove) then
-      OnProjectRemove(Self);
-    if Assigned(FOnChange) then
-      OnChange(Self);
-    Result:= true;
+  try
+    iProject:= GetProjectById(aId);
+    if iProject <> nil then
+    begin
+      for i := 0 to ProjectCount - 1 do
+      begin
+        if FProjects[i] = iProject then
+        begin
+          FProjects[i].Free;
+          FProjects[i]:= FProjects[ high(FProjects)];
+          SetLength(FProjects, length(FProjects) - 1);
+          FSaved := false;
+          if Assigned(FOnProjectRemove) then
+            OnProjectRemove(Self);
+          if Assigned(FOnChange) then
+            OnChange(Self);
+          Result:= true;
+          Exit;
+        end;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | RemoveProjectById | ' + E.Message);
+      MessageBox(Application.Handle, PChar
+          (ClassName + ' | RemoveProjectById | ' + E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
+end;
+
+function TORDESYProjectList.RemoveProjectByIndex(
+  const aIndex: integer): boolean;
+begin
+  Result:= false;
+  try
+    if (aIndex >= 0) and (aIndex < ProjectCount) then
+    begin
+      FProjects[aIndex].Free;
+      FProjects[aIndex]:= FProjects[ high(FProjects)];
+      SetLength(FProjects, length(FProjects) - 1);
+      FSaved := false;
+      if Assigned(FOnProjectRemove) then
+        OnProjectRemove(Self);
+      if Assigned(FOnChange) then
+        OnChange(Self);
+      Result:= true;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | RemoveProjectByIndex | ' + E.Message);
+      MessageBox(Application.Handle, PChar
+          (ClassName + ' | RemoveProjectByIndex | ' + E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
   end;
 end;
 
 function TORDESYProjectList.RemoveSchemeById(const aId: integer): Boolean;
+var
+  iScheme: TOraScheme;
+  i: integer;
 begin
-  //
+  Result:= false;
+  try
+    iScheme:= GetOraSchemeById(aId);
+    if iScheme <> nil then
+    begin
+      for i := 0 to ProjectCount - 1 do
+      begin
+        if FOraSchemes[i] = iScheme then
+        begin
+          FOraSchemes[i].Free;
+          FOraSchemes[i]:= FOraSchemes[ high(FOraSchemes)];
+          SetLength(FOraSchemes, length(FOraSchemes) - 1);
+          FSaved := false;
+          if Assigned(FOnSchemeRemove) then
+            OnSchemeRemove(Self);
+          if Assigned(FOnChange) then
+            OnChange(Self);
+          Result:= true;
+          Exit;
+        end;
+      end;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | RemoveSchemeById | ' + E.Message);
+      MessageBox(Application.Handle, PChar
+          (ClassName + ' | RemoveSchemeById | ' + E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
+end;
+
+function TORDESYProjectList.RemoveSchemeByIndex(const aIndex: integer): boolean;
+begin
+  Result:= false;
+  try
+    if (aIndex >= 0) and (aIndex < OraSchemeCount) then
+    begin
+      FOraSchemes[aIndex].Free;
+      FOraSchemes[aIndex]:= FOraSchemes[ high(FOraSchemes)];
+      SetLength(FOraSchemes, length(FOraSchemes) - 1);
+      FSaved := false;
+      if Assigned(FOnSchemeRemove) then
+        OnSchemeRemove(Self);
+      if Assigned(FOnChange) then
+        OnChange(Self);
+      Result:= true;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | RemoveSchemeByIndex | ' + E.Message);
+      MessageBox(Application.Handle, PChar
+          (ClassName + ' | RemoveSchemeByIndex | ' + E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar
+          (Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
 end;
 
 function TORDESYProjectList.SaveToFile(const aFileName: string): boolean;
