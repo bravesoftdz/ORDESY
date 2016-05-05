@@ -28,9 +28,6 @@ type
     ProjectList: TORDESYProjectList;
   end;
 
-var
-  fmBaseList: TfmBaseList;
-
 function ShowBaseListDialog(aProjectList: TORDESYProjectList): boolean;
 
 implementation
@@ -41,7 +38,6 @@ uses
   uMain;
 
 function ShowBaseListDialog(aProjectList: TORDESYProjectList): boolean;
-
 begin
   with TfmBaseList.Create(Application) do
     try
@@ -61,8 +57,11 @@ end;
 
 procedure TfmBaseList.btnDeleteClick(Sender: TObject);
 begin
-
-  UpdateList(ProjectList);
+  if (lbxList.Count > 0) and (lbxList.ItemIndex >= 0) and (lbxList.Items.Objects[lbxList.ItemIndex] is TOraBase) then
+  begin
+    ProjectList.RemoveBaseById(TOraBase(lbxList.Items.Objects[lbxList.ItemIndex]).Id);
+    UpdateList(ProjectList);
+  end;
 end;
 
 procedure TfmBaseList.btnEditClick(Sender: TObject);

@@ -1400,9 +1400,9 @@ begin
     on E: Exception do
     begin
       {$IFDEF Debug}
-      AddToLog(ClassName + ' | RemoveSchemeByIndex | ' + E.Message);
+      AddToLog(ClassName + ' | RemoveBaseByIndex | ' + E.Message);
       MessageBox(Application.Handle, PChar
-          (ClassName + ' | RemoveSchemeByIndex | ' + E.Message), PChar
+          (ClassName + ' | RemoveBaseByIndex | ' + E.Message), PChar
           (Application.Title + ' - Error'), 48);
       {$ELSE}
       MessageBox(Application.Handle, PChar(E.Message), PChar
