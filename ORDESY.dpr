@@ -12,7 +12,8 @@ uses
   uHash in 'uHash.pas',
   uWrap in 'uWrap.pas',
   uBaseList in 'uBaseList.pas' {fmBaseList},
-  uSchemeList in 'uSchemeList.pas' {fmSchemeList};
+  uSchemeList in 'uSchemeList.pas' {fmSchemeList},
+  uSchemeDialog in 'uSchemeDialog.pas' {fmSchemeDialog};
 
 {$R *.res}
 

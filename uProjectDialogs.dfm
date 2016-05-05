@@ -60,7 +60,7 @@ object fmProjectCreate: TfmProjectCreate
       Anchors = [akLeft, akBottom]
       Caption = 'Date:'
     end
-    object gpbProjectName: TGroupBox
+    object gbxProjectName: TGroupBox
       Left = 0
       Top = 0
       Width = 414
@@ -81,7 +81,7 @@ object fmProjectCreate: TfmProjectCreate
         TabOrder = 0
       end
     end
-    object gpbDescription: TGroupBox
+    object gbxDescription: TGroupBox
       Left = 0
       Top = 49
       Width = 414

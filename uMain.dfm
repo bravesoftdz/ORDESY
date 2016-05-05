@@ -114,7 +114,7 @@ object fmMain: TfmMain
       Height = 347
       Align = alClient
       TabOrder = 3
-      object gbInfo: TGroupBox
+      object gbxInfo: TGroupBox
         Left = 1
         Top = 1
         Width = 330

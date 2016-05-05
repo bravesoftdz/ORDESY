@@ -4,15 +4,15 @@ edt - TEdit
 btn - TButton
 pnl - TPanel
 lbl - TLabel
-gpb - TGroupBox
+gbx - TGroupBox
+cbx - TComboBox
+lbx - TListBox
 spl - TSplitter
 mmo - TMemo
 tv - TTreeView
 mm - TMainMenu
 mi - TMenuItem
 fm - TForm
-cbx - TComboBox
-lbx - TListBox
 
 }
 unit uMain;
@@ -24,7 +24,8 @@ uses
   {$IFDEF Debug}
   uLog,
   {$ENDIF}
-  uORDESY, uExplode, uShellFuncs, uProjectDialogs, uOptions, uWrap, uBaseList,
+  uORDESY, uExplode, uShellFuncs, uOptions, uWrap,
+  uSchemeDialog, uBaseList, uSchemeList, uProjectDialogs, // Dialogs
   // Delphi Modules
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, ToolWin, ImgList, Buttons;
@@ -58,7 +59,7 @@ type
     miBase: TMenuItem;
     miBaseList: TMenuItem;
     ppmMain: TPopupMenu;
-    gbInfo: TGroupBox;
+    gbxInfo: TGroupBox;
     edName: TEdit;
     lblName: TLabel;
     lblDescription: TLabel;
@@ -90,6 +91,7 @@ type
     procedure AddBase(Sender: TObject);
     procedure OnEditBase(Sender: TObject);
     procedure EditBase(aBase: TOraBase);
+    procedure DeleteBase(Sender: TObject);
     procedure tvMainClick(Sender: TObject);
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
@@ -114,6 +116,22 @@ implementation
 
 {$R *.dfm}
 
+procedure TfmMain.DeleteBase(Sender: TObject);
+var
+  reply: word;
+  ProjectList: TORDESYProjectList;
+begin
+  ProjectList:= TORDESYProjectList(TOraBase(tvMain.Selected.Data).ProjectListRef);
+  reply:= MessageBox(Handle, PChar('Delete base?' + #13#10 + 'Deleting base will affect on all projects.'), PChar('Confirm'), 36);
+  if reply = IDYES then
+  begin
+    ProjectList.RemoveBaseById(TOraBase(tvMain.Selected.Data).Id);
+    tvMain.Selected.Data:= nil;
+    tvMain.Deselect(tvMain.Selected);
+    UpdateGUI;
+  end;
+end;
+
 procedure TfmMain.DeleteModule(Sender: TObject);
 var
   reply: word;
@@ -123,9 +141,9 @@ begin
   reply:= MessageBox(Handle, PChar('Delete module?' + #13#10), PChar('Confirm'), 36);
   if reply = IDYES then
   begin
-    tvMain.Deselect(tvMain.Selected);
     Project.RemoveModuleById(TORDESYModule(tvMain.Selected.Data).Id);
     tvMain.Selected.Data:= nil;
+    tvMain.Deselect(tvMain.Selected);
     UpdateGUI;
   end;
 end;
@@ -139,9 +157,9 @@ begin
   reply:= MessageBox(Handle, PChar('Delete project?' + #13#10), PChar('Confirm'), 36);
   if reply = IDYES then
   begin
-    tvMain.Deselect(tvMain.Selected);
     ProjectList.RemoveProjectById(Project.Id);
     tvMain.Selected.Data:= nil;
+    tvMain.Deselect(tvMain.Selected);
     UpdateGUI;
   end;
 end;
@@ -396,22 +414,54 @@ begin
 end;
 
 procedure TfmMain.OnEditBase(Sender: TObject);
+var
+  BaseName: string;
+label
+  retry;
 begin
-  //
+  try
+    retry:
+    BaseName:= TOraBase(tvMain.Selected.Data).Name;
+    if InputQuery('Edit base', 'Change base name:', BaseName) then
+    begin
+      if (BaseName <> '') and (Length(BaseName) <= 255) then
+      begin
+        TOraBase(tvMain.Selected.Data).Name:= BaseName;
+        UpdateGUI;
+      end
+      else
+        goto retry;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | AddBase | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | AddBase | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
 end;
 
 procedure TfmMain.AddBase(Sender: TObject);
 var
   BaseName: string;
+label
+  retry;
 begin
   try
+    retry:
     if InputQuery('Add base', 'Enter base name:', BaseName) then
     begin
       if (BaseName <> '') and (Length(BaseName) <= 255) then
       begin
         ProjectList.AddOraBase(TOraBase.Create(ProjectList ,ProjectList.GetFreeBaseId, BaseName));
         UpdateGUI;
-      end;
+      end
+      else
+        goto retry;
     end;
   except
     on E: Exception do
@@ -431,15 +481,15 @@ begin
   Result:= false;
   if aObject <> nil then
   begin
-    if (TObject(aObject) is TORDESYProject) and (aTag >= 0) and (aTag <= 10) then
+    if (TObject(aObject) is TORDESYProject) and (aTag >= 1) and (aTag <= 10) or (aTag = 0) then
       Result:= true;
-    if (TObject(aObject) is TORDESYModule) and (aTag >= 5) and (aTag <= 15) then
+    if (TObject(aObject) is TORDESYModule) and (aTag >= 5) and (aTag <= 15) or (aTag = 0) then
       Result:= true;
-    if (TObject(aObject) is TOraBase) and (aTag >= 10) and (aTag <= 20) then
+    if (TObject(aObject) is TOraBase) and (aTag >= 10) and (aTag <= 20) or (aTag = 0) then
       Result:= true;
-    if (TObject(aObject) is TOraScheme) and (aTag >= 15) and (aTag <= 25) then
+    if (TObject(aObject) is TOraScheme) and (aTag >= 15) and (aTag <= 25) or (aTag = 0) then
       Result:= True;
-    if (TObject(aObject) is TOraItem) and (aTag >= 20) and (aTag <= 30) then
+    if (TObject(aObject) is TOraItem) and (aTag >= 20) and (aTag <= 30) or (aTag = 0) then
       Result:= true;
   end
   else
@@ -544,66 +594,16 @@ begin
       BaseMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
-      //MenuItem.OnClick:= EditBase;
+      MenuItem.OnClick:= OnEditBase;
       MenuItem.Caption:= 'Edit base';
       MenuItem.Tag:= 16;
       BaseMenu.Add(MenuItem);
-    // -----------------------------------------Module popup 11-20
-    {MenuItem:= TMenuItem.Create(ppmMain);
-    MenuItem.OnClick:= AddModule;
-    MenuItem.Caption:= 'Add base';
-    MenuItem.Tag:= 11;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);}
-    // -----------------------------------------Base popup 21-30
-    {MenuItem:= TMenuItem.Create(ppmMain);
-    MenuItem.OnClick:= AddBase;
-    MenuItem.Caption:= 'Add base';
-    MenuItem.Tag:= 21;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
-    //
-    MenuItem:= TMenuItem.Create(ppmMain);
-    //MenuItem.OnClick:= miCreateProject.OnClick;
-    MenuItem.Caption:= 'Edit base';
-    MenuItem.Tag:= 22;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
-    //
-    MenuItem:= TMenuItem.Create(ppmMain);
-    //MenuItem.OnClick:= miCreateProject.OnClick;
-    MenuItem.Caption:= 'Delete base';
-    MenuItem.Tag:= 23;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);}
-    // -----------------------------------------Scheme popup 31-40
-    {MenuItem:= TMenuItem.Create(ppmMain);
-    //MenuItem.OnClick:= miCreateProject.OnClick;
-    MenuItem.Caption:= 'Add scheme';
-    MenuItem.Tag:= 31;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
-    //
-    MenuItem:= TMenuItem.Create(ppmMain);
-    //MenuItem.OnClick:= EditScheme
-    MenuItem.Caption:= 'Edit scheme';
-    MenuItem.Tag:= 32;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
-    //
-    MenuItem:= TMenuItem.Create(ppmMain);
-    MenuItem.OnClick:= WrapItem;
-    MenuItem.Caption:= 'Wrap item';
-    MenuItem.Tag:= 33;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);
-    //
-    MenuItem:= TMenuItem.Create(ppmMain);
-    //MenuItem.OnClick:= EditScheme
-    MenuItem.Caption:= 'Delete scheme';
-    MenuItem.Tag:= 34;
-    MenuItem.Visible:= false;
-    ppmMain.Items.Add(MenuItem);}
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= DeleteBase;
+      MenuItem.Caption:= 'Delete base';
+      MenuItem.Tag:= 16;
+      BaseMenu.Add(MenuItem);
   except
     on E: Exception do
     begin

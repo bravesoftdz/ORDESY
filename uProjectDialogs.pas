@@ -10,9 +10,9 @@ uses
 type
   TfmProjectCreate = class(TForm)
     pnlMain: TPanel;
-    gpbProjectName: TGroupBox;
+    gbxProjectName: TGroupBox;
     edtProjectName: TEdit;
-    gpbDescription: TGroupBox;
+    gbxDescription: TGroupBox;
     mmDescription: TMemo;
     lblCreatorHead: TLabel;
     lblCreator: TLabel;
@@ -25,7 +25,7 @@ type
     procedure btnCreateClick(Sender: TObject);
   end;
 
-function ShowProjectCreateDialog(const aCreator: string; var aProjectList: TORDESYProjectList): boolean;
+function ShowProjectCreateDialog(const aCreator: string; aProjectList: TORDESYProjectList): boolean;
 function ShowProjectEditDialog(aProject: TORDESYProject): boolean;
 function ShowModuleCreateDialog(aProject: TORDESYProject): boolean;
 function ShowModuleEditDialog(aModule: TORDESYModule): boolean;
@@ -34,7 +34,7 @@ implementation
 
 {$R *.dfm}
 
-function ShowProjectCreateDialog(const aCreator: string; var aProjectList: TORDESYProjectList): boolean;
+function ShowProjectCreateDialog(const aCreator: string; aProjectList: TORDESYProjectList): boolean;
 var
   dTimer: TTimer;
 begin
