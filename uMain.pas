@@ -78,7 +78,6 @@ type
     procedure tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
     procedure splMainMoved(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure WMWindowPosChanged(var aMessage: TWMWindowPosChanged); message WM_WINDOWPOSCHANGED;
     procedure ViewProjects(aTreeView: TTreeView);
     procedure ppmMainPopup(Sender: TObject);
     procedure AddProject(Sender: TObject);
@@ -96,10 +95,13 @@ type
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
     procedure miBaseListClick(Sender: TObject);
+    procedure FormResize(Sender: TObject);
   private
     AppOptions: TOptions;
     ProjectList: TORDESYProjectList;
+    //procedure WMWindowPosChanged(var aMessage: TWMWindowPosChanged); message WM_WINDOWPOSCHANGED;
     function CanPopup(const aTag: integer; aObject: Pointer): boolean;
+    procedure SaveFormSize(const aWidth, aHeight: integer);
     procedure PrepareGUI;
     procedure UpdateGUI;
     procedure PrepareOptions;
@@ -211,6 +213,11 @@ end;
 procedure TfmMain.FormCreate(Sender: TObject);
 begin
   InitApp;
+end;
+
+procedure TfmMain.FormResize(Sender: TObject);
+begin
+  SaveFormSize(fmMain.Width, fmMain.Height);
 end;
 
 procedure TfmMain.FreeApp(var Action: TCloseAction);
@@ -526,9 +533,21 @@ var
 begin
   try
     edtUserName.Text:= AppOptions.UserName;
-    tvMain.Width:= strtoint(AppOptions.GetOption('GUI', 'GroupList'));
-    fmMain.Width:= strtoint(AppOptions.GetOption('GUI', 'FormWidth'));
-    fmMain.Height:= strtoint(AppOptions.GetOption('GUI', 'FormHeight'));
+    try
+      tvMain.Width:= strtoint(AppOptions.GetOption('GUI', 'GroupList'));
+      fmMain.Width:= strtoint(AppOptions.GetOption('GUI', 'FormWidth'));
+      fmMain.Height:= strtoint(AppOptions.GetOption('GUI', 'FormHeight'));
+    except
+      on E: Exception do
+      begin
+        {$IFDEF Debug}
+        AddToLog(ClassName + ' | PrepareGUI | ' + E.Message);
+        MessageBox(Application.Handle, PChar(ClassName + ' | PrepareGUI | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+        {$ELSE}
+        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+        {$ENDIF}
+      end;
+    end;
     // -----------------------------------------Project Popup 1-10
     ProjectMenu:= TMenuItem.Create(ppmMain);
     ProjectMenu.Caption:= 'Project';
@@ -642,12 +661,12 @@ end;
 
 procedure TfmMain.PrepareProjects;
 //TEST
-var
+{var
   iProject: TORDESYProject;
   iModule: TORDESYModule;
   iBase: TOraBase;
   iScheme: TOraScheme;
-  iItem: TOraItem;
+  iItem: TOraItem;}
 //END TEST
 begin
   try
@@ -691,6 +710,16 @@ begin
       MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
       {$ENDIF}
     end;
+  end;
+end;
+
+procedure TfmMain.SaveFormSize(const aWidth, aHeight: integer);
+begin
+  if Assigned(AppOptions) then
+  begin
+    AppOptions.SetOption('GUI', 'FormWidth', inttostr(aWidth)); // leak memory here, idk what the reason
+    AppOptions.SetOption('GUI', 'FormHeight', inttostr(aHeight)); // leak memory here, idk what the reason
+    //ShowMessage(inttostr(AppOptions.Count));
   end;
 end;
 
@@ -787,15 +816,11 @@ begin
   ViewProjects(tvMain);
 end;
 
-procedure TfmMain.WMWindowPosChanged(var aMessage: TWMWindowPosChanged);
+{procedure TfmMain.WMWindowPosChanged(var aMessage: TWMWindowPosChanged);
 begin
   inherited;
-  if Assigned(AppOptions) then
-  begin
-    AppOptions.SetOption('GUI', 'FormWidth', inttostr(fmMain.Width));
-    AppOptions.SetOption('GUI', 'FormHeight', inttostr(fmMain.Height));
-  end;
-end;
+  SaveFormSize(fmMain.Width, fmMain.Height);
+end;}
 
 procedure TfmMain.WrapItem(Sender: TObject);
 begin

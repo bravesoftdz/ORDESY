@@ -12,11 +12,13 @@ uses
   Windows, Classes, SysUtils, IniFiles;
 
 type
-  TOption = record
+  TOption = packed record
     Section: string;
     Name: string;
     Value: string;
+    Procedure Clear;
   end;
+  POption = ^TOption;
 
   TOptions = class
   private
@@ -52,7 +54,12 @@ begin
 end;
 
 destructor TOptions.Destroy;
+var
+  i: integer;
 begin
+  for i := 0 to high(FOptions) do
+    //Dispose(POption(@FOptions[i]));
+    FOptions[i].Clear;
   SetLength(FOptions, 0);
   inherited Destroy;
 end;
@@ -72,7 +79,7 @@ begin
       Exit;
     end;
   end;
-  raise Exception.Create('No such value in [' + aSection + ']:[' + aName + ']');
+  //raise Exception.Create('No such value in [' + aSection + ']:[' + aName + ']');
 end;
 
 function TOptions.GetOptionsCount: integer;
@@ -183,6 +190,13 @@ begin
   FLastChange:= GetTime;
   FEmpty:= false;
   Result:= true;
+end;
+
+{ TOption }
+
+procedure TOption.Clear;
+begin
+  Self:= Default(TOption);
 end;
 
 end.

@@ -17,6 +17,7 @@ object fmMain: TfmMain
   Position = poDesktopCenter
   OnClose = FormClose
   OnCreate = FormCreate
+  OnResize = FormResize
   PixelsPerInch = 96
   TextHeight = 13
   object pnlMain: TPanel
