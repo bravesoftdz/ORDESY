@@ -130,8 +130,10 @@ begin
     iObj:= TObject(iSelected.Data);
     if iObj is TOraBase then
       iProjectList:= TORDESYProjectList(TOraBase(iObj).ProjectListRef)
-    else if iObj is TOraScheme then
-      iProjectList:= TORDESYProjectList(TOraScheme(iObj).ProjectListRef);
+    else if (iObj is TOraScheme) and Assigned(iSelected.Parent) and (iSelected.Parent.Data <> nil) and (TObject(iSelected.Parent.Data) is TOraBase) then
+      iProjectList:= TORDESYProjectList(TOraScheme(iObj).ProjectListRef)
+    else
+      Exit;
     reply:= MessageBox(Handle, PChar('Delete base?' + #13#10 + 'Deleting base will affect on all projects.'), PChar('Confirm'), 36);
     if reply = IDYES then
     begin
@@ -446,12 +448,20 @@ end;
 procedure TfmMain.OnEditBase(Sender: TObject);
 var
   BaseName: string;
+  iSelected: TTreeNode;
 label
   retry;
 begin
   try
+    iSelected:= tvMain.Selected;
     retry:
-    BaseName:= TOraBase(tvMain.Selected.Data).Name;
+    if TObject(iSelected.Data) is TOraBase then
+      BaseName:= TOraBase(iSelected.Data).Name
+    else if TObject(iSelected.Data) is TOraScheme then
+      if (iSelected.Parent <> nil) and (iSelected.Parent.Data <> nil) and (TObject(iSelected.Parent.Data) is TOraBase) then
+        BaseName:= TOraBase(iSelected.Parent.Data).Name
+    else
+      Exit;
     if InputQuery('Edit base', 'Change base name:', BaseName) then
     begin
       if (BaseName <> '') and (Length(BaseName) <= 255) then
