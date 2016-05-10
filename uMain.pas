@@ -88,9 +88,12 @@ type
     procedure EditModule(Sender: TObject);
     procedure DeleteModule(Sender: TObject);
     procedure AddBase(Sender: TObject);
-    procedure OnEditBase(Sender: TObject);
-    procedure EditBase(aBase: TOraBase);
+    procedure OnEditBase(Sender: TObject); // Edit base by ProjectList
+    procedure EditBase(aBase: TOraBase); // Edit base by BaseList
     procedure DeleteBase(Sender: TObject);
+    procedure AddScheme(Sender: TObject);
+    procedure EditScheme(Sender: TObject);
+    procedure DeleteScheme(Sender: TObject);
     procedure tvMainClick(Sender: TObject);
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
@@ -193,6 +196,11 @@ begin
   end;
 end;
 
+procedure TfmMain.DeleteScheme(Sender: TObject);
+begin
+ //
+end;
+
 procedure TfmMain.EditBase(aBase: TOraBase);
 var
   BaseName: string;
@@ -230,6 +238,11 @@ procedure TfmMain.EditProject(Sender: TObject);
 begin
   if ShowProjectEditDialog(TORDESYProject(tvMain.Selected.Data)) then
     UpdateGUI;
+end;
+
+procedure TfmMain.EditScheme(Sender: TObject);
+begin
+ //
 end;
 
 procedure TfmMain.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -422,9 +435,16 @@ begin
     UpdateGUI;
 end;
 
+procedure TfmMain.AddScheme(Sender: TObject);
+begin
+  if ShowSchemeCreateDialog(ProjectList) then
+    UpdateGUI;
+end;
+
 procedure TfmMain.miBaseListClick(Sender: TObject);
 begin
-  ShowBaseListDialog(ProjectList);
+  if ShowBaseListDialog(ProjectList) then
+    UpdateGUI;
 end;
 
 procedure TfmMain.miExitClick(Sender: TObject);
@@ -562,6 +582,7 @@ var
   ProjectMenu: TMenuItem;
   ModuleMenu: TMenuItem;
   BaseMenu: TMenuItem;
+  SchemeMenu: TMenuItem;
   MenuItem: TMenuItem;
 begin
   try
@@ -607,13 +628,13 @@ begin
     //
     ModuleMenu:= TMenuItem.Create(ppmMain);
     ModuleMenu.Caption:= 'Module';
-    ModuleMenu.Tag:= 5;
+    ModuleMenu.Tag:= 0;
     ppmMain.Items.Add(ModuleMenu);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= AddModule;
       MenuItem.Caption:= 'Add module';
-      MenuItem.Tag:= 5;
+      MenuItem.Tag:= 0;
       ModuleMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
@@ -656,6 +677,29 @@ begin
       MenuItem.Caption:= 'Delete base';
       MenuItem.Tag:= 16;
       BaseMenu.Add(MenuItem);
+    //
+    SchemeMenu:= TMenuItem.Create(ppmMain);
+    SchemeMenu.Caption:= 'Scheme';
+    SchemeMenu.Tag:= 0;
+    ppmMain.Items.Add(SchemeMenu);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= AddBase;
+      MenuItem.Caption:= 'Add scheme';
+      MenuItem.Tag:= 0;
+      SchemeMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= OnEditBase;
+      MenuItem.Caption:= 'Edit scheme';
+      MenuItem.Tag:= 21;
+      SchemeMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= DeleteBase;
+      MenuItem.Caption:= 'Delete scheme';
+      MenuItem.Tag:= 21;
+      SchemeMenu.Add(MenuItem);
   except
     on E: Exception do
     begin

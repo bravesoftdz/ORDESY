@@ -41,9 +41,11 @@ function ShowBaseListDialog(aProjectList: TORDESYProjectList): boolean;
 begin
   with TfmBaseList.Create(Application) do
     try
+      Result:= false;
       ProjectList:= aProjectList;
       UpdateList(ProjectList);
       ShowModal;
+      Result:= true;
     finally
       Free;
     end;
