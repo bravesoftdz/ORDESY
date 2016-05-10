@@ -43,7 +43,8 @@ begin
   try
     FConn.Connected := true;
     FConnected := FConn.Connected;
-    FOnChangeStatus(Self);
+    if Assigned(FOnChangeStatus) then
+      OnChangeStatus(Self);
   except
     on E: Exception do
     begin

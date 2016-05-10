@@ -77,7 +77,7 @@ begin
           iWrapScheme:= TWrapComboBox(pnlMain.Controls[n]);
       end;
       for i := 0 to aProjectList.OraBaseCount - 1 do
-        iWrapBase.Items.AddObject(aProjectList.GetOraBaseName(i), aProjectList.GetOraBaseByIndex(i));
+        iWrapBase.Items.AddObject(aProjectList.GetOraBaseNameByIndex(i), aProjectList.GetOraBaseByIndex(i));
       if iWrapBase.Items.Count <> 0 then
         iWrapBase.ItemIndex:= 0;
       for i := 0 to aProjectList.OraSchemeCount - 1 do
@@ -165,14 +165,15 @@ procedure TfmWrap.lbxListDrawItem(Control: TWinControl; Index: Integer;
   Rect: TRect; State: TOwnerDrawState);
 var
   IItem: TOraItemHead;
-  ValidIcon, NotValidIcon: TBitmap;
+  ValidIcon: TBitmap;
+  NotValidIcon: TIcon;
 begin
   if (Assigned(lbxList.Items.Objects[Index])) and (lbxList.Items.Objects[Index] is TOraItemHead) then
   begin
     try
       ValidIcon:= TBitmap.Create;
-      NotValidIcon:= TBitmap.Create;
-      fmMain.imlMain.GetBitmap(1, NotValidIcon);
+      NotValidIcon:= TIcon.Create;
+      fmMain.imlMain.GetIcon(1, NotValidIcon);
       IItem:= TOraItemHead(lbxList.Items.Objects[Index]);
       case IItem.ItemType of
         OraProcedure: begin
@@ -187,9 +188,10 @@ begin
       end;
       if not IItem.Valid then
         ValidIcon.Canvas.Draw(0, 0, NotValidIcon);
+      lbxList.ItemHeight:= ValidIcon.Height + 2;
       lbxList.Canvas.FillRect(Rect);
-      lbxList.Canvas.Draw(2, Rect.Top + 2, ValidIcon);
-      lbxList.Canvas.TextOut(18, Rect.Top + ((lbxList.ItemHeight div 2) - (Canvas.TextHeight('A') div 2)), lbxList.Items[Index]);
+      lbxList.Canvas.Draw(1, Rect.Top + 1, ValidIcon);
+      lbxList.Canvas.TextOut(20, Rect.Top + ((lbxList.ItemHeight div 2) - (Canvas.TextHeight('A') div 2)), lbxList.Items[Index]);
     finally
       ValidIcon.Free;
       NotValidIcon.Free;
@@ -232,7 +234,8 @@ end;
 procedure TWrapComboBox.WM_CB_SETCURSEL(var Message: TMessage);
 begin
   inherited;
-  OnChange(Self);
+  if Assigned(OnChange) then
+    OnChange(Self);
 end;
 
 end.

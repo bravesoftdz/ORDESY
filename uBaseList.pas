@@ -58,11 +58,17 @@ begin
 end;
 
 procedure TfmBaseList.btnDeleteClick(Sender: TObject);
+var
+  reply: word;
 begin
   if (lbxList.Count > 0) and (lbxList.ItemIndex >= 0) and (lbxList.Items.Objects[lbxList.ItemIndex] is TOraBase) then
   begin
-    ProjectList.RemoveBaseById(TOraBase(lbxList.Items.Objects[lbxList.ItemIndex]).Id);
-    UpdateList(ProjectList);
+    reply:= MessageBox(Handle, PChar('Delete base: ' + TOraBase(lbxList.Items.Objects[lbxList.ItemIndex]).Name + '?' + #13#10), PChar('Confirm'), 36);
+    if reply = IDYES then
+    begin
+      ProjectList.RemoveBaseById(TOraBase(lbxList.Items.Objects[lbxList.ItemIndex]).Id);
+      UpdateList(ProjectList);
+    end;
   end;
 end;
 

@@ -92,13 +92,16 @@ type
     procedure EditBase(aBase: TOraBase); // Edit base by BaseList
     procedure DeleteBase(Sender: TObject);
     procedure AddScheme(Sender: TObject);
-    procedure EditScheme(Sender: TObject);
+    procedure OnEditScheme(Sender: TObject); // Edit scheme by ProjectList
+    procedure EditScheme(aScheme: TOraScheme); // Edit scheme by SchemeList
     procedure DeleteScheme(Sender: TObject);
     procedure tvMainClick(Sender: TObject);
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
     procedure miBaseListClick(Sender: TObject);
     procedure FormResize(Sender: TObject);
+    procedure miSchemeListClick(Sender: TObject);
+    procedure miAddSchemeClick(Sender: TObject);
   private
     AppOptions: TOptions;
     ProjectList: TORDESYProjectList;
@@ -124,28 +127,23 @@ implementation
 procedure TfmMain.DeleteBase(Sender: TObject);
 var
   reply: word;
-  iProjectList: TORDESYProjectList;
   iSelected: TTreeNode;
   iObj: TObject;
 begin
   try
     iSelected:= tvMain.Selected;
     iObj:= TObject(iSelected.Data);
-    if iObj is TOraBase then
-      iProjectList:= TORDESYProjectList(TOraBase(iObj).ProjectListRef)
-    else if (iObj is TOraScheme) and Assigned(iSelected.Parent) and (iSelected.Parent.Data <> nil) and (TObject(iSelected.Parent.Data) is TOraBase) then
-      iProjectList:= TORDESYProjectList(TOraScheme(iObj).ProjectListRef)
-    else
+    if not (iObj is TOraBase) and not (iObj is TOraScheme) then
       Exit;
     reply:= MessageBox(Handle, PChar('Delete base?' + #13#10 + 'Deleting base will affect on all projects.'), PChar('Confirm'), 36);
     if reply = IDYES then
     begin
       if iObj is TOraBase then
-        iProjectList.RemoveBaseById(TOraBase(iObj).Id);
+        ProjectList.RemoveBaseById(TOraBase(iObj).Id);
       if iObj is TOraScheme then
       begin
         if Assigned(iSelected.Parent) and (iSelected.Parent.Data <> nil) and (TObject(iSelected.Parent.Data) is TOraBase) then
-          iProjectList.RemoveBaseById(TOraBase(iSelected.Parent.Data).Id);
+          ProjectList.RemoveBaseById(TOraBase(iSelected.Parent.Data).Id);
       end;
       tvMain.Deselect(tvMain.Selected);
       tvMain.Selected.Data:= nil;
@@ -197,8 +195,30 @@ begin
 end;
 
 procedure TfmMain.DeleteScheme(Sender: TObject);
+var
+  iScheme: TOraScheme;
+  iSelected: TTreeNode;
+  reply: word;
 begin
- //
+  iSelected:= tvMain.Selected;
+  if not Assigned(iSelected) then
+    Exit;
+  if TObject(iSelected.Data) is TOraScheme then
+    iScheme:= TOraScheme(iSelected.Data)
+  else if TObject(iSelected.Data) is TOraItem then
+    iScheme:= ProjectList.GetOraSchemeById(TOraItem(iSelected.Data).SchemeId)
+  else
+    Exit;
+  if not Assigned(iScheme) then
+    Exit;
+  reply:= MessageBox(Handle, PChar('Delete scheme: ' + iScheme.Login + '?' + #13#10), PChar('Confirm'), 36);
+  if reply = IDYES then
+  begin
+    ProjectList.RemoveSchemeById(iScheme.Id);
+    tvMain.Selected.Data:= nil;
+    tvMain.Deselect(tvMain.Selected);
+    UpdateGUI;
+  end;
 end;
 
 procedure TfmMain.EditBase(aBase: TOraBase);
@@ -240,9 +260,10 @@ begin
     UpdateGUI;
 end;
 
-procedure TfmMain.EditScheme(Sender: TObject);
+procedure TfmMain.EditScheme(aScheme: TOraScheme);
 begin
- //
+  if ShowSchemeEditDialog(aScheme) then
+    UpdateGUI;
 end;
 
 procedure TfmMain.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -441,6 +462,11 @@ begin
     UpdateGUI;
 end;
 
+procedure TfmMain.miAddSchemeClick(Sender: TObject);
+begin
+  AddScheme(Self);
+end;
+
 procedure TfmMain.miBaseListClick(Sender: TObject);
 begin
   if ShowBaseListDialog(ProjectList) then
@@ -463,6 +489,12 @@ procedure TfmMain.miSavechangesClick(Sender: TObject);
 begin
   if Assigned(ProjectList) then
     ProjectList.SaveToFile();
+end;
+
+procedure TfmMain.miSchemeListClick(Sender: TObject);
+begin
+  if ShowSchemeListDialog(ProjectList) then
+    UpdateGUI;
 end;
 
 procedure TfmMain.OnEditBase(Sender: TObject);
@@ -492,6 +524,36 @@ begin
       else
         goto retry;
     end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | AddBase | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | AddBase | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
+end;
+
+procedure TfmMain.OnEditScheme(Sender: TObject);
+var
+  BaseName: string;
+  iSelected: TTreeNode;
+  iScheme: TOraScheme;
+begin
+  try
+    iSelected:= tvMain.Selected;
+    if TObject(iSelected.Data) is TOraScheme then
+      iScheme:= TOraScheme(iSelected.Data)
+    else if TObject(iSelected.Data) is TOraItem then
+      if (iSelected.Parent <> nil) and (iSelected.Parent.Data <> nil) and (TObject(iSelected.Parent.Data) is TOraScheme) then
+        iScheme:= TOraScheme(iSelected.Parent.Data)
+    else
+      Exit;
+    if Assigned(iScheme) then
+      EditScheme(iScheme);
   except
     on E: Exception do
     begin
@@ -684,19 +746,19 @@ begin
     ppmMain.Items.Add(SchemeMenu);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
-      MenuItem.OnClick:= AddBase;
+      MenuItem.OnClick:= AddScheme;
       MenuItem.Caption:= 'Add scheme';
       MenuItem.Tag:= 0;
       SchemeMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
-      MenuItem.OnClick:= OnEditBase;
+      MenuItem.OnClick:= OnEditScheme;
       MenuItem.Caption:= 'Edit scheme';
       MenuItem.Tag:= 21;
       SchemeMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
-      MenuItem.OnClick:= DeleteBase;
+      MenuItem.OnClick:= DeleteScheme;
       MenuItem.Caption:= 'Delete scheme';
       MenuItem.Tag:= 21;
       SchemeMenu.Add(MenuItem);

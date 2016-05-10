@@ -26,7 +26,6 @@ object fmSchemeDialog: TfmSchemeDialog
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 0
-    ExplicitHeight = 168
     DesignSize = (
       214
       138)
@@ -38,7 +37,6 @@ object fmSchemeDialog: TfmSchemeDialog
       Align = alTop
       Caption = 'Login:'
       TabOrder = 0
-      ExplicitWidth = 426
       DesignSize = (
         214
         49)
@@ -47,6 +45,7 @@ object fmSchemeDialog: TfmSchemeDialog
         Top = 17
         Width = 200
         Height = 24
+        Hint = 'max 255'
         Anchors = [akLeft, akTop, akRight]
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
@@ -55,7 +54,6 @@ object fmSchemeDialog: TfmSchemeDialog
         Font.Style = []
         ParentFont = False
         TabOrder = 0
-        ExplicitWidth = 234
       end
     end
     object gbxPass: TGroupBox
@@ -66,9 +64,6 @@ object fmSchemeDialog: TfmSchemeDialog
       Align = alTop
       Caption = 'Password:'
       TabOrder = 1
-      ExplicitLeft = 2
-      ExplicitTop = 15
-      ExplicitWidth = 230
       DesignSize = (
         214
         49)
@@ -77,6 +72,7 @@ object fmSchemeDialog: TfmSchemeDialog
         Top = 17
         Width = 200
         Height = 24
+        Hint = 'max 255'
         Anchors = [akLeft, akTop, akRight]
         Font.Charset = DEFAULT_CHARSET
         Font.Color = clWindowText
@@ -84,6 +80,9 @@ object fmSchemeDialog: TfmSchemeDialog
         Font.Name = 'Tahoma'
         Font.Style = []
         ParentFont = False
+        ParentShowHint = False
+        PasswordChar = '*'
+        ShowHint = True
         TabOrder = 0
       end
     end

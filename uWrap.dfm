@@ -13,6 +13,7 @@ object fmWrap: TfmWrap
   Font.Name = 'Tahoma'
   Font.Style = []
   OldCreateOrder = False
+  Position = poMainFormCenter
   OnClose = FormClose
   PixelsPerInch = 96
   TextHeight = 13
@@ -104,6 +105,7 @@ object fmWrap: TfmWrap
       Top = 51
       Width = 428
       Height = 283
+      Style = lbOwnerDrawFixed
       Anchors = [akLeft, akTop, akRight, akBottom]
       ItemHeight = 13
       TabOrder = 1

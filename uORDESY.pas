@@ -26,7 +26,7 @@ type
   TORDESYModule = class;
   TORDESYProject = class;
   TORDESYProjectList = class;
-  TPORDESYProject = ^TORDESYProject;
+  PORDESYProject = ^TORDESYProject;
 
   TOraItemHead = class
     Name: string;
@@ -101,6 +101,7 @@ type
     FProjectListRef: Pointer;
     procedure SetLogin(const Value: string);
     procedure SetPass(const Value: string);
+    procedure Clear;
   public
     constructor Create(aProjectListRef: Pointer; const aId: integer;
       const aLogin, aPass: string);
@@ -220,7 +221,8 @@ type
     procedure AddOraBase(aBase: TOraBase);
     function GetOraBaseById(const aId: integer): TOraBase;
     function GetOraBaseByIndex(const aIndex: integer): TOraBase;
-    function GetOraBaseName(const aIndex: integer): string;
+    function GetOraBaseNameById(const aId: integer): string;
+    function GetOraBaseNameByIndex(const aIndex: integer): string;
     function RemoveBaseById(const aId: integer): Boolean;
     function RemoveBaseByIndex(const aIndex: integer): boolean;
     // Scheme
@@ -530,10 +532,7 @@ function TORDESYProjectList.GetOraBaseByIndex(const aIndex: integer): TOraBase;
 begin
   Result := nil;
   if (aIndex >= 0) and (aIndex <= high(FOraBases)) then
-    Result := FOraBases[aIndex]
-  else
-    raise Exception.Create('Incorrect base index. Max value is: ' + IntToStr
-        ( high(FOraBases)));
+    Result := FOraBases[aIndex];
 end;
 
 function TORDESYProjectList.GetOraBaseCount: integer;
@@ -541,14 +540,22 @@ begin
   Result := length(FOraBases);
 end;
 
-function TORDESYProjectList.GetOraBaseName(const aIndex: integer): string;
+function TORDESYProjectList.GetOraBaseNameById(const aId: integer): string;
 var
   i: integer;
 begin
   Result := '';
   for i := 0 to high(FOraBases) do
-    if FOraBases[i].FId = aIndex then
+    if FOraBases[i].FId = aId then
       Result := FOraBases[i].Name;
+end;
+
+function TORDESYProjectList.GetOraBaseNameByIndex(
+  const aIndex: integer): string;
+begin
+  Result := '';
+  if (aIndex >= 0) and (aIndex <= high(FOraBases)) then
+    Result := FOraBases[aIndex].Name;
 end;
 
 function TORDESYModule.GetOraItemById(const aId: integer): TOraItem;
@@ -688,6 +695,7 @@ begin
             .AsString + #13#10;
         ItemBody := ItemBody + Query.Fields[0].AsString + #13#10;
         firstItem := false;
+        Query.Next;
       end;
       iItem := TOraItem.Create(iModule, iModule.GetFreeItemId, aBaseId,
         aSchemeId, aName, ItemBody, aType);
@@ -711,6 +719,15 @@ end;
 
 { TOraScheme }
 
+procedure TOraScheme.Clear;
+var
+  i: integer;
+begin
+  for i := 0 to high(FItemList) do
+    FItemList[i].Free;
+  SetLength(FItemList, 0);
+end;
+
 procedure TOraScheme.Connect(const BaseId: integer);
 begin
   try
@@ -718,7 +735,7 @@ begin
     begin
       if not Assigned(FConnection) then
         FConnection := TConnection.Create(TORDESYProjectList(FProjectListRef)
-            .GetOraBaseName(BaseId), FLogin, FPass, connstrORA);
+            .GetOraBaseNameById(BaseId), FLogin, FPass, connstrORA);
       FConnection.Connect;
       FConnected := FConnection.Connected;
       if FConnection.LastError <> '' then
@@ -761,10 +778,8 @@ begin
     FConnection.Disconnect;
     FConnection.Free;
   end;
-  for i := 0 to High(FItemList) do
-    FItemList[i].Free;
-  SetLength(FItemList, 0);
-  inherited Destroy;
+  Clear;
+  inherited;
 end;
 
 procedure TOraScheme.Disconnect;
@@ -776,9 +791,11 @@ end;
 
 procedure TOraScheme.GetItemList(const aItemType: TOraItemType;
   aList: TStrings);
+var
+  i: integer;
 begin
   try
-    SetLength(FItemList, 0);
+    Clear;
     if not Connected then
       raise Exception.Create('Connect scheme to base first.');
     if not Assigned(aList) then
@@ -805,6 +822,7 @@ begin
         FItemList[ High(FItemList)].ItemType := aItemType;
         aList.AddObject(FItemList[ High(FItemList)].Name,
           FItemList[ High(FItemList)]);
+        Next;
       end;
       aList.EndUpdate;
     end;
@@ -1484,8 +1502,7 @@ var
 begin
   Result:= false;
   try
-    for i := 0 to ProjectCount - 1 do
-    begin
+    for i := 0 to OraSchemeCount - 1 do
       if FOraSchemes[i].Id = aId then
       begin
         FOraSchemes[i].Free;
@@ -1499,7 +1516,6 @@ begin
         Result:= true;
         Exit;
       end;
-    end;
   except
     on E: Exception do
     begin

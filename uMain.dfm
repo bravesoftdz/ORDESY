@@ -241,9 +241,11 @@ object fmMain: TfmMain
       Caption = 'Scheme'
       object miAddScheme: TMenuItem
         Caption = 'Add scheme'
+        OnClick = miAddSchemeClick
       end
       object miSchemeList: TMenuItem
         Caption = 'Scheme list'
+        OnClick = miSchemeListClick
       end
     end
     object miLast: TMenuItem
