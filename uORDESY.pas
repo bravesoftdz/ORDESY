@@ -1409,29 +1409,24 @@ end;
 
 function TORDESYProjectList.RemoveProjectById(const aId: integer): boolean;
 var
-  iProject: TORDESYProject;
   i: integer;
 begin
   Result:= false;
   try
-    iProject:= GetProjectById(aId);
-    if iProject <> nil then
+    for i := 0 to ProjectCount - 1 do
     begin
-      for i := 0 to ProjectCount - 1 do
+      if FProjects[i].Id = aId then
       begin
-        if FProjects[i] = iProject then
-        begin
-          FProjects[i].Free;
-          FProjects[i]:= FProjects[ high(FProjects)];
-          SetLength(FProjects, length(FProjects) - 1);
-          FSaved := false;
-          if Assigned(FOnProjectRemove) then
-            OnProjectRemove(Self);
-          if Assigned(FOnChange) then
-            OnChange(Self);
-          Result:= true;
-          Exit;
-        end;
+        FProjects[i].Free;
+        FProjects[i]:= FProjects[ high(FProjects)];
+        SetLength(FProjects, length(FProjects) - 1);
+        FSaved := false;
+        if Assigned(FOnProjectRemove) then
+          OnProjectRemove(Self);
+        if Assigned(FOnChange) then
+          OnChange(Self);
+        Result:= true;
+        Exit;
       end;
     end;
   except
@@ -1485,29 +1480,24 @@ end;
 
 function TORDESYProjectList.RemoveSchemeById(const aId: integer): Boolean;
 var
-  iScheme: TOraScheme;
   i: integer;
 begin
   Result:= false;
   try
-    iScheme:= GetOraSchemeById(aId);
-    if iScheme <> nil then
+    for i := 0 to ProjectCount - 1 do
     begin
-      for i := 0 to ProjectCount - 1 do
+      if FOraSchemes[i].Id = aId then
       begin
-        if FOraSchemes[i] = iScheme then
-        begin
-          FOraSchemes[i].Free;
-          FOraSchemes[i]:= FOraSchemes[ high(FOraSchemes)];
-          SetLength(FOraSchemes, length(FOraSchemes) - 1);
-          FSaved := false;
-          if Assigned(FOnSchemeRemove) then
-            OnSchemeRemove(Self);
-          if Assigned(FOnChange) then
-            OnChange(Self);
-          Result:= true;
-          Exit;
-        end;
+        FOraSchemes[i].Free;
+        FOraSchemes[i]:= FOraSchemes[ high(FOraSchemes)];
+        SetLength(FOraSchemes, length(FOraSchemes) - 1);
+        FSaved := false;
+        if Assigned(FOnSchemeRemove) then
+          OnSchemeRemove(Self);
+        if Assigned(FOnChange) then
+          OnChange(Self);
+        Result:= true;
+        Exit;
       end;
     end;
   except
