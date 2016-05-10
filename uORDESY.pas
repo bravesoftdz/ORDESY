@@ -515,6 +515,7 @@ function TORDESYProjectList.GetOraBaseById(const aId: integer): TOraBase;
 var
   i: integer;
 begin
+  Result := nil;
   for i := 0 to high(FOraBases) do
   begin
     if FOraBases[i].FId = aId then
@@ -523,7 +524,6 @@ begin
       Exit;
     end;
   end;
-  Result := nil;
 end;
 
 function TORDESYProjectList.GetOraBaseByIndex(const aIndex: integer): TOraBase;
@@ -555,6 +555,7 @@ function TORDESYModule.GetOraItemById(const aId: integer): TOraItem;
 var
   i: integer;
 begin
+  Result := nil;
   for i := 0 to high(FOraItems) do
   begin
     if FOraItems[i].FId = aId then
@@ -563,7 +564,6 @@ begin
       Exit;
     end;
   end;
-  Result := nil;
 end;
 
 function TORDESYModule.GetOraItemByIndex(const aIndex: integer): TOraItem;
@@ -595,6 +595,7 @@ function TORDESYProjectList.GetOraSchemeById(const aId: integer): TOraScheme;
 var
   i: integer;
 begin
+  Result := nil;
   for i := 0 to high(FOraSchemes) do
   begin
     if FOraSchemes[i].FId = aId then
@@ -603,7 +604,6 @@ begin
       Exit;
     end;
   end;
-  Result := nil;
 end;
 
 function TORDESYProjectList.GetOraSchemeByIndex(const aIndex: integer)
@@ -1339,29 +1339,24 @@ end;
 
 function TORDESYProjectList.RemoveBaseById(const aId: integer): Boolean;
 var
-  iBase: TOraBase;
   i: integer;
 begin
   Result:= false;
   try
-    iBase:= GetOraBaseById(aId);
-    if iBase <> nil then
+    for i := 0 to OraBaseCount - 1 do
     begin
-      for i := 0 to OraBaseCount - 1 do
+      if FOraBases[i].Id = aId then
       begin
-        if FOraBases[i] = iBase then
-        begin
-          FOraBases[i].Free;
-          FOraBases[i]:= FOraBases[ high(FOraBases)];
-          SetLength(FOraBases, length(FOraBases) - 1);
-          FSaved := false;
-          if Assigned(FOnBaseRemove) then
-            OnBaseRemove(Self);
-          if Assigned(FOnChange) then
-            OnChange(Self);
-          Result:= true;
-          Exit;
-        end;
+        FOraBases[i].Free;
+        FOraBases[i]:= FOraBases[ high(FOraBases)];
+        SetLength(FOraBases, length(FOraBases) - 1);
+        FSaved := false;
+        if Assigned(FOnBaseRemove) then
+          OnBaseRemove(Self);
+        if Assigned(FOnChange) then
+          OnChange(Self);
+        Result:= true;
+        Exit;
       end;
     end;
   except

@@ -9,7 +9,11 @@ unit uOptions;
 interface
 
 uses
-  Windows, Classes, SysUtils, IniFiles;
+  // ORDESY Modules
+  {$IFDEF Debug}
+  uLog,
+  {$ENDIF}
+  Windows, Classes, SysUtils, IniFiles, Forms;
 
 type
   TOption = packed record
@@ -169,27 +173,39 @@ var
   Founded: boolean;
 begin
   Result:= False;
-  Founded:= false;
-  if (aSection = '') or (aName = '') or (aValue = '') then
-    raise Exception.Create('Some of option agrument is empty!');
-  for i := 0 to high(FOptions) do
-  begin
-    if (FOptions[i].Section = aSection) and (FOptions[i].Name = aName) then
+  try
+    Founded:= false;
+    if (aSection = '') or (aName = '') or (aValue = '') then
+      raise Exception.Create('Some of option agrument is empty!');
+    for i := 0 to high(FOptions) do
     begin
-      FOptions[i].Value:= aValue;
-      Founded:= true;
+      if (FOptions[i].Section = aSection) and (FOptions[i].Name = aName) then
+      begin
+        FOptions[i].Value:= aValue;
+        Founded:= true;
+      end;
+    end;
+    if not Founded then
+    begin
+      SetLength(FOptions, length(FOptions) + 1);
+      FOptions[high(FOptions)].Section:= aSection;
+      FOptions[high(FOptions)].Name:= aName;
+      FOptions[high(FOptions)].Value:= aValue;
+    end;
+    FLastChange:= GetTime;
+    FEmpty:= false;
+    Result:= true;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | WrapItem | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | WrapItem | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
     end;
   end;
-  if not Founded then
-  begin
-    SetLength(FOptions, length(FOptions) + 1);
-    FOptions[high(FOptions)].Section:= aSection;
-    FOptions[high(FOptions)].Name:= aName;
-    FOptions[high(FOptions)].Value:= aValue;
-  end;
-  FLastChange:= GetTime;
-  FEmpty:= false;
-  Result:= true;
 end;
 
 { TOption }

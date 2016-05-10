@@ -121,16 +121,41 @@ implementation
 procedure TfmMain.DeleteBase(Sender: TObject);
 var
   reply: word;
-  ProjectList: TORDESYProjectList;
+  iProjectList: TORDESYProjectList;
+  iSelected: TTreeNode;
+  iObj: TObject;
 begin
-  ProjectList:= TORDESYProjectList(TOraBase(tvMain.Selected.Data).ProjectListRef);
-  reply:= MessageBox(Handle, PChar('Delete base?' + #13#10 + 'Deleting base will affect on all projects.'), PChar('Confirm'), 36);
-  if reply = IDYES then
-  begin
-    ProjectList.RemoveBaseById(TOraBase(tvMain.Selected.Data).Id);
-    tvMain.Selected.Data:= nil;
-    tvMain.Deselect(tvMain.Selected);
-    UpdateGUI;
+  try
+    iSelected:= tvMain.Selected;
+    iObj:= TObject(iSelected.Data);
+    if iObj is TOraBase then
+      iProjectList:= TORDESYProjectList(TOraBase(iObj).ProjectListRef)
+    else if iObj is TOraScheme then
+      iProjectList:= TORDESYProjectList(TOraScheme(iObj).ProjectListRef);
+    reply:= MessageBox(Handle, PChar('Delete base?' + #13#10 + 'Deleting base will affect on all projects.'), PChar('Confirm'), 36);
+    if reply = IDYES then
+    begin
+      if iObj is TOraBase then
+        iProjectList.RemoveBaseById(TOraBase(iObj).Id);
+      if iObj is TOraScheme then
+      begin
+        if Assigned(iSelected.Parent) and (iSelected.Parent.Data <> nil) and (TObject(iSelected.Parent.Data) is TOraBase) then
+          iProjectList.RemoveBaseById(TOraBase(iSelected.Parent.Data).Id);
+      end;
+      tvMain.Deselect(tvMain.Selected);
+      tvMain.Selected.Data:= nil;
+      UpdateGUI;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | DeleteBase | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | DeleteBase | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
   end;
 end;
 
@@ -347,29 +372,27 @@ begin
         iItem:= iModule.GetOraItemByIndex(iI);
         iBase:= ProjectList.GetOraBaseById(iItem.BaseId);
         iScheme:= ProjectList.GetOraSchemeById(iItem.SchemeId);
-        if iBase <> nil then
+        BaseAdded:= nil;
+        SchemeAdded:= nil;
+        if Assigned(iBase) then
         begin
           BaseAdded:= BaseInModule(iProject.Id, iModule.Id, iItem.BaseId);
-          if BaseAdded = nil then
+          if not Assigned(BaseAdded) then
             BaseAdded:= aTreeView.Items.AddChildObject(ModuleAdded, iBase.Name, iBase);
-          if iScheme <> nil then
-          begin
-            SchemeAdded:= SchemeInBase(iProject.Id, iModule.Id, iItem.BaseId, iItem.SchemeId);
-            if SchemeAdded = nil then
-              SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, iScheme.Login, iScheme);
-            ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
-          end
-          else
-          begin
-            // No such scheme in project
-            SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, '?', nil);
-            ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
-          end;
+        end
+        else
+          // No such base in project
+          BaseAdded:= aTreeView.Items.AddChildObject(ModuleAdded, '?', nil);
+        if Assigned(iScheme) then
+        begin
+          SchemeAdded:= SchemeInBase(iProject.Id, iModule.Id, iItem.BaseId, iItem.SchemeId);
+          if not Assigned(SchemeAdded) then
+            SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, iScheme.Login, iScheme);
+          ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
         end
         else
         begin
-          // No such base in project
-          BaseAdded:= aTreeView.Items.AddChildObject(ModuleAdded, '?', nil);
+          // No such scheme in project
           SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, '?', nil);
           ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
         end;
@@ -725,7 +748,8 @@ end;
 
 procedure TfmMain.splMainMoved(Sender: TObject);
 begin
-  AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
+  if Assigned(AppOptions) then
+    AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
 end;
 
 procedure TfmMain.tvMainClick(Sender: TObject);
