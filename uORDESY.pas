@@ -486,17 +486,23 @@ begin
 end;
 
 function TORDESYProject.RemoveModuleById(const aId: integer): boolean;
+var
+  i: integer;
 begin
   Result := false;
   try
-    if GetModuleById(aId) <> nil then
+    for i := 0 to high(FORDESYModules) do
     begin
-      FORDESYModules[aId].Free;
-      FORDESYModules[aId] := FORDESYModules[High(FORDESYModules)];
-      SetLength(FORDESYModules, length(FORDESYModules) - 1);
-      if Assigned(FOnChange) then
-        OnChange(Self);
-      Result:= true;
+      if FORDESYModules[i].Id = aId then
+      begin
+        FORDESYModules[i].Free;
+        FORDESYModules[i] := FORDESYModules[High(FORDESYModules)];
+        SetLength(FORDESYModules, length(FORDESYModules) - 1);
+        if Assigned(FOnChange) then
+          OnChange(Self);
+        Result:= true;
+        Exit;
+      end;
     end;
   except
     on E: Exception do
@@ -704,6 +710,8 @@ begin
       iItem := TOraItem.Create(iModule, iModule.GetFreeItemId, aBaseId,
         aSchemeId, aName, AdjustLineBreaks(ItemBody), aType);
       iModule.AddOraItem(iItem);
+      if Assigned(FOnChange) then
+        OnChange(Self);
     end;
   except
     on E: Exception do

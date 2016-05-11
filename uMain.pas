@@ -286,15 +286,6 @@ var
   reply: word;
 begin
   try
-    if Assigned(AppOptions) then
-    begin
-      AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
-      AppOptions.SetOption('GUI', 'FormLeft', inttostr(fmMain.Left));
-      AppOptions.SetOption('GUI', 'FormTop', inttostr(fmMain.Top));
-      if not AppOptions.SaveUserOptions() then
-        raise Exception.Create('Cant''t save user options!');
-      AppOptions.Free;
-    end;
     if Assigned(ProjectList) then
     begin
       if not ProjectList.Saved then
@@ -310,6 +301,15 @@ begin
         end;
       end;
       ProjectList.Free;
+      if Assigned(AppOptions) then
+      begin
+        AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
+        AppOptions.SetOption('GUI', 'FormLeft', inttostr(fmMain.Left));
+        AppOptions.SetOption('GUI', 'FormTop', inttostr(fmMain.Top));
+        if not AppOptions.SaveUserOptions() then
+          raise Exception.Create('Cant''t save user options!');
+        AppOptions.Free;
+      end;
     end;
   except
   on E: Exception do
