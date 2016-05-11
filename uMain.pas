@@ -828,9 +828,8 @@ begin
       AppOptions:= TOptions.Create;
     AppOptions.AppTitle:= Application.Title;
     AppOptions.UserName:= GetWindowsUser; //Узнаем текущее имя пользователя
-    AppOptions.LoadUserOptions();
-    {if not AppOptions.LoadUserOptions() then
-      raise Exception.Create('Cant''t load user options!');}
+    if not AppOptions.LoadUserOptions() then
+      raise Exception.Create('Cant''t load user options!');
   except
     on E: Exception do
     begin
