@@ -13,7 +13,8 @@ uses
   uWrap in 'uWrap.pas',
   uBaseList in 'uBaseList.pas' {fmBaseList},
   uSchemeList in 'uSchemeList.pas' {fmSchemeList},
-  uSchemeDialog in 'uSchemeDialog.pas' {fmSchemeDialog};
+  uSchemeDialog in 'uSchemeDialog.pas' {fmSchemeDialog},
+  uLazyTreeState in 'uLazyTreeState.pas';
 
 {$R *.res}
 

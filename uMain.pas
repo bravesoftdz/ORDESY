@@ -24,7 +24,7 @@ uses
   {$IFDEF Debug}
   uLog,
   {$ENDIF}
-  uORDESY, uExplode, uShellFuncs, uOptions, uWrap,
+  uORDESY, uExplode, uShellFuncs, uOptions, uWrap, uLazyTreeState,
   uSchemeDialog, uBaseList, uSchemeList, uProjectDialogs, // Dialogs
   // Delphi Modules
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
@@ -102,8 +102,11 @@ type
     procedure FormResize(Sender: TObject);
     procedure miSchemeListClick(Sender: TObject);
     procedure miAddSchemeClick(Sender: TObject);
+    procedure tvMainExpanded(Sender: TObject; Node: TTreeNode);
+    procedure pnlBottomClick(Sender: TObject);
   private
     AppOptions: TOptions;
+    TreeStateList: TLazyStateList;
     ProjectList: TORDESYProjectList;
     //procedure WMWindowPosChanged(var aMessage: TWMWindowPosChanged); message WM_WINDOWPOSCHANGED;
     function CanPopup(const aTag: integer; aObject: Pointer): boolean;
@@ -111,6 +114,7 @@ type
     procedure PrepareGUI;
     procedure UpdateGUI;
     procedure PrepareOptions;
+    procedure PrepareTreeState;
     procedure PrepareProjects;
   public
     procedure InitApp;
@@ -310,6 +314,12 @@ begin
           raise Exception.Create('Cant''t save user options!');
         AppOptions.Free;
       end;
+      if Assigned(TreeStateList) then
+      begin
+        if not TreeStateList.SaveStateToFile() then
+          raise Exception.Create('Cant''t save tree state list!');
+        TreeStateList.Free;
+      end;
     end;
   except
   on E: Exception do
@@ -328,6 +338,7 @@ procedure TfmMain.InitApp;
 begin
   PrepareOptions;
   PrepareProjects;
+  PrepareTreeState;
   PrepareGUI;
 end;
 
@@ -619,6 +630,11 @@ begin
       Result:= True;
 end;
 
+procedure TfmMain.pnlBottomClick(Sender: TObject);
+begin
+  ShowMessage(TreeStateList.ShowContents);
+end;
+
 procedure TfmMain.ppmMainPopup(Sender: TObject);
 var
   i, n: integer;
@@ -799,46 +815,12 @@ begin
 end;
 
 procedure TfmMain.PrepareProjects;
-//TEST
-{var
-  iProject: TORDESYProject;
-  iModule: TORDESYModule;
-  iBase: TOraBase;
-  iScheme: TOraScheme;
-  iItem: TOraItem;}
-//END TEST
 begin
   try
     if not Assigned(ProjectList) then
       ProjectList:= TORDESYProjectList.Create;
     if not ProjectList.LoadFromFile() then
       raise Exception.Create('Error while loading project list. Please check the files/folders!');
-    //
-    //TEST
-    {iProject:= TORDESYProject.Create(ProjectList.GetFreeProjectId, 'BIG PROJECT');
-    iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module1', 'DESCRIPTION1'));
-    iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module2', 'DESCRIPTION2'));
-    iProject.AddModule(TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module3', 'DESCRIPTION3'));
-    iModule:= TORDESYModule.Create(iProject, iProject.GetFreeModuleId, 'Little Module4', 'DESCRIPTION4');
-    iProject.AddModule(iModule);
-
-    ProjectList.AddOraBase(TOraBase.Create(ProjectList ,ProjectList.GetFreeBaseId, 'Some BASE _ 1'));
-    iBase:= TOraBase.Create(ProjectList ,ProjectList.GetFreeBaseId, 'Some BASE _ 2');
-    ProjectList.AddOraBase(iBase);
-    iScheme:= TOraScheme.Create(ProjectList, ProjectList.GetFreeSchemeId, 'Scheme of SOME BASE', 'pass');
-    ProjectList.AddOraScheme(iScheme);
-
-    iModule.AddOraItem(TOraItem.Create(iModule, iModule.GetFreeItemId, iBase.Id, iScheme.Id, 'PROC_1', 'procedure', OraProcedure));
-    iModule.AddOraItem(TOraItem.Create(iModule, iModule.GetFreeItemId, iBase.Id, iScheme.Id, 'FUNC_1', 'function', OraFunction));
-    iModule.AddOraItem(TOraItem.Create(iModule, iModule.GetFreeItemId, iBase.Id, iScheme.Id, 'PACK_1', 'package', OraPackage));
-
-    ProjectList.AddProject(iProject);}
-
-    //ShowMessage(ProjectList.GetProjectByIndex(0).GetModuleByIndex(2).GetOraItemByIndex(2).Name);
-    //ShowMessage(inttostr(ProjectList.GetProjectByIndex(0).GetModuleByIndex(3).OraItemCount));
-    //END TEST
-    ViewProjects(tvMain);
-    //ShowMessage(ProjectList.GetProjectByIndex(0).GetOraItemByIndex(0).Name);
   except
     on E: Exception do
     begin
@@ -850,6 +832,16 @@ begin
       {$ENDIF}
     end;
   end;
+end;
+
+procedure TfmMain.PrepareTreeState;
+begin
+  if not Assigned(TreeStateList) then
+    TreeStateList:= TLazyStateList.Create;
+  if not TreeStateList.LoadStateFromFile() then
+    raise Exception.Create('Error while loading tree state list. Please check the files/folders!');
+  ViewProjects(tvMain);
+  TreeStateList.AppendState(tvMain);
 end;
 
 procedure TfmMain.SaveFormSize(const aWidth, aHeight: integer);
@@ -903,6 +895,12 @@ begin
     end;
 end;
 
+procedure TfmMain.tvMainExpanded(Sender: TObject; Node: TTreeNode);
+begin
+  TreeStateList.ReadState(tvMain);
+  //ShowMessage(inttostr(TreeStateList.Count));
+end;
+
 procedure TfmMain.tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
 begin
   try
@@ -953,7 +951,9 @@ end;
 
 procedure TfmMain.UpdateGUI;
 begin
+  TreeStateList.ReadState(tvMain);
   ViewProjects(tvMain);
+  TreeStateList.AppendState(tvMain);
 end;
 
 {procedure TfmMain.WMWindowPosChanged(var aMessage: TWMWindowPosChanged);

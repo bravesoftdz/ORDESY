@@ -57,6 +57,8 @@ object fmMain: TfmMain
       SortType = stText
       TabOrder = 0
       OnClick = tvMainClick
+      OnCollapsed = tvMainExpanded
+      OnExpanded = tvMainExpanded
       OnGetImageIndex = tvMainGetImageIndex
       OnGetSelectedIndex = tvMainGetImageIndex
     end
@@ -75,6 +77,8 @@ object fmMain: TfmMain
       Height = 36
       Align = alBottom
       TabOrder = 2
+      OnClick = pnlBottomClick
+      ExplicitTop = 393
       DesignSize = (
         552
         36)
