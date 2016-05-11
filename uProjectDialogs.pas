@@ -47,7 +47,7 @@ begin
       dTimer.OnTimer:= UpdateCurrentDateTime;
       if ShowModal = mrOk then
       begin
-        aProjectList.AddProject(TORDESYProject.Create(aProjectList.GetFreeProjectId, edtProjectName.Text, mmDescription.Text, lblCreator.Caption));
+        aProjectList.AddProject(TORDESYProject.Create(aProjectList, aProjectList.GetFreeProjectId, edtProjectName.Text, mmDescription.Text, lblCreator.Caption));
         Result:= true;
       end;
     finally

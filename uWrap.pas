@@ -40,10 +40,15 @@ type
     procedure cbxBaseListSelect(Sender: TObject);
     procedure cbxSchemeListSelect(Sender: TObject);
     procedure PrepareGUI;
+    procedure btnWrapClick(Sender: TObject);
+    procedure cbxItemTypeChange(Sender: TObject);
+    procedure lbxListClick(Sender: TObject);
   private
     CurrentProject: TORDESYProject;
     CurrentBase: TOraBase;
     CurrentScheme: TOraScheme;
+    CurrentType: string;
+    CurrentName: string;
   end;
 
 var
@@ -93,7 +98,7 @@ begin
       if ShowModal = mrOk then
       begin
         try
-          CurrentProject.WrapItem(aModule.Id, CurrentBase.Id, CurrentScheme.Id, lbxList.Items.Strings[lbxList.ItemIndex], TOraItem.GetItemType(cbxItemType.Items[cbxItemType.ItemIndex]));
+          CurrentProject.WrapItem(aModule.Id, CurrentBase.Id, CurrentScheme.Id, CurrentName, TOraItem.GetItemType(CurrentType));
           Result:= true;
         except
           on E: Exception do
@@ -138,6 +143,12 @@ begin
   end;
 end;
 
+procedure TfmWrap.btnWrapClick(Sender: TObject);
+begin
+  if not Assigned(CurrentProject) or not Assigned(CurrentBase) or not Assigned(CurrentScheme) or (CurrentType = '') or (CurrentName = '') then
+    ModalResult:= mrNone;
+end;
+
 procedure TfmWrap.cbxBaseListSelect(Sender: TObject);
 begin
   if (Sender is TWrapComboBox) and (TWrapComboBox(Sender).Items.Count > 0) and (TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex] <> nil) and (TObject(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]) is TOraBase) then
@@ -147,18 +158,70 @@ begin
   end;
 end;
 
+procedure TfmWrap.cbxItemTypeChange(Sender: TObject);
+begin
+  try
+    if (cbxItemType.Items.Count > 0) and (cbxItemType.ItemIndex >= 0) and (cbxItemType.ItemIndex < cbxItemType.Items.Count) then
+      CurrentType:= cbxItemType.Items.Strings[cbxItemType.ItemIndex]
+    else
+      CurrentType:= '';
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | cbxItemTypeChange | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | cbxItemTypeChange | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
+end;
+
 procedure TfmWrap.cbxSchemeListSelect(Sender: TObject);
 begin
-  if (Sender is TWrapComboBox) and (TWrapComboBox(Sender).Items.Count > 0) and (TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex] <> nil) and (TObject(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]) is TOraScheme) then
-  begin
-    CurrentScheme:= TOraScheme(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]);
-    lblScheme.Caption:= 'Scheme: ' + CurrentScheme.Login;
+  try
+    if (Sender is TWrapComboBox) and (TWrapComboBox(Sender).Items.Count > 0) and (TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex] <> nil) and (TObject(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]) is TOraScheme) then
+    begin
+      CurrentScheme:= TOraScheme(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]);
+      lblScheme.Caption:= 'Scheme: ' + CurrentScheme.Login;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | cbxSchemeListSelect | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | cbxSchemeListSelect | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
   end;
 end;
 
 procedure TfmWrap.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   Action:= caFree;
+end;
+
+procedure TfmWrap.lbxListClick(Sender: TObject);
+begin
+  try
+    if (lbxList.Count > 0) and (lbxList.ItemIndex >= 0) and (lbxList.ItemIndex < lbxList.Count) then
+      CurrentName:= lbxList.Items.Strings[lbxList.ItemIndex]
+    else
+      CurrentName:= '';
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | lbxListClick | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | lbxListClick | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
+    end;
+  end;
 end;
 
 procedure TfmWrap.lbxListDrawItem(Control: TWinControl; Index: Integer;
@@ -168,33 +231,45 @@ var
   ValidIcon: TBitmap;
   NotValidIcon: TIcon;
 begin
-  if (Assigned(lbxList.Items.Objects[Index])) and (lbxList.Items.Objects[Index] is TOraItemHead) then
-  begin
-    try
-      ValidIcon:= TBitmap.Create;
-      NotValidIcon:= TIcon.Create;
-      fmMain.imlMain.GetIcon(1, NotValidIcon);
-      IItem:= TOraItemHead(lbxList.Items.Objects[Index]);
-      case IItem.ItemType of
-        OraProcedure: begin
-          fmMain.imlMain.GetBitmap(15, ValidIcon);
+  try
+    if (Assigned(lbxList.Items.Objects[Index])) and (lbxList.Items.Objects[Index] is TOraItemHead) then
+    begin
+      try
+        ValidIcon:= TBitmap.Create;
+        NotValidIcon:= TIcon.Create;
+        fmMain.imlMain.GetIcon(1, NotValidIcon);
+        IItem:= TOraItemHead(lbxList.Items.Objects[Index]);
+        case IItem.ItemType of
+          OraProcedure: begin
+            fmMain.imlMain.GetBitmap(15, ValidIcon);
+          end;
+          OraFunction: begin
+            fmMain.imlMain.GetBitmap(14, ValidIcon);
+          end;
+          OraPackage: begin
+            fmMain.imlMain.GetBitmap(9, ValidIcon);
+          end;
         end;
-        OraFunction: begin
-          fmMain.imlMain.GetBitmap(14, ValidIcon);
-        end;
-        OraPackage: begin
-          fmMain.imlMain.GetBitmap(9, ValidIcon);
-        end;
+        if not IItem.Valid then
+          ValidIcon.Canvas.Draw(0, 0, NotValidIcon);
+        lbxList.ItemHeight:= ValidIcon.Height + 2;
+        lbxList.Canvas.FillRect(Rect);
+        lbxList.Canvas.Draw(1, Rect.Top + 1, ValidIcon);
+        lbxList.Canvas.TextOut(20, Rect.Top + ((lbxList.ItemHeight div 2) - (Canvas.TextHeight('A') div 2)), lbxList.Items[Index]);
+      finally
+        ValidIcon.Free;
+        NotValidIcon.Free;
       end;
-      if not IItem.Valid then
-        ValidIcon.Canvas.Draw(0, 0, NotValidIcon);
-      lbxList.ItemHeight:= ValidIcon.Height + 2;
-      lbxList.Canvas.FillRect(Rect);
-      lbxList.Canvas.Draw(1, Rect.Top + 1, ValidIcon);
-      lbxList.Canvas.TextOut(20, Rect.Top + ((lbxList.ItemHeight div 2) - (Canvas.TextHeight('A') div 2)), lbxList.Items[Index]);
-    finally
-      ValidIcon.Free;
-      NotValidIcon.Free;
+    end;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | lbxListDrawItem | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | lbxListDrawItem | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
     end;
   end;
 end;
@@ -227,6 +302,8 @@ begin
   cbxWrapScheme.Style:= csDropDownList;
   cbxWrapScheme.Visible:= true;
   cbxWrapScheme.Parent:= pnlMain;
+  //
+  CurrentType:= 'PROCEDURE';
 end;
 
 { TWrapComboBox }

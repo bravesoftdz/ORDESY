@@ -95,6 +95,7 @@ object fmWrap: TfmWrap
       ItemIndex = 0
       TabOrder = 0
       Text = 'PROCEDURE'
+      OnChange = cbxItemTypeChange
       Items.Strings = (
         'PROCEDURE'
         'FUNCTION'
@@ -109,6 +110,7 @@ object fmWrap: TfmWrap
       Anchors = [akLeft, akTop, akRight, akBottom]
       ItemHeight = 13
       TabOrder = 1
+      OnClick = lbxListClick
       OnDrawItem = lbxListDrawItem
     end
     object btnUpdate: TButton
@@ -131,6 +133,7 @@ object fmWrap: TfmWrap
       Default = True
       ModalResult = 1
       TabOrder = 3
+      OnClick = btnWrapClick
     end
     object btnClose: TButton
       Left = 361

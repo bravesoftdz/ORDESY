@@ -160,11 +160,15 @@ object fmMain: TfmMain
           Left = 88
           Top = 52
           Width = 230
-          Height = 237
-          Anchors = [akLeft, akTop, akRight]
+          Height = 277
+          Anchors = [akLeft, akTop, akRight, akBottom]
+          DoubleBuffered = True
+          HideSelection = False
+          ParentDoubleBuffered = False
           ReadOnly = True
           ScrollBars = ssBoth
           TabOrder = 1
+          WantReturns = False
         end
       end
     end

@@ -163,7 +163,7 @@ type
     procedure SetCreator(const Value: string);
     procedure SetDescription(const Value: string);
   public
-    constructor Create(const aId: integer; const aName: string = 'New Project';
+    constructor Create(aProjectRef: Pointer; const aId: integer; const aName: string = 'New Project';
       const aDescription: string = 'About new project...';
       const aCreator: string = 'nobody'; const aDateCreate: TDateTime = 0);
     destructor Destroy; override;
@@ -340,7 +340,7 @@ begin
     OnChange(Self);
 end;
 
-constructor TORDESYProject.Create(const aId: integer; const aName: string;
+constructor TORDESYProject.Create(aProjectRef: Pointer; const aId: integer; const aName: string;
   const aDescription: string; const aCreator: string;
   const aDateCreate: TDateTime);
 begin
@@ -349,6 +349,7 @@ begin
   FName := aName;
   FDescription := aDescription;
   FCreator := aCreator;
+  FProjectListRef:= aProjectRef;
   if aDateCreate = 0 then
     FDateCreate := Date + Time
   else
@@ -451,7 +452,7 @@ begin
   Result := nil;
   for i := 0 to high(FORDESYModules) do
   begin
-    if FORDESYModules[i].FId = aId then
+    if FORDESYModules[i].Id = aId then
     begin
       Result := FORDESYModules[i];
       Exit;
@@ -520,7 +521,7 @@ begin
   Result := nil;
   for i := 0 to high(FOraBases) do
   begin
-    if FOraBases[i].FId = aId then
+    if FOraBases[i].Id = aId then
     begin
       Result := FOraBases[i];
       Exit;
@@ -605,7 +606,7 @@ begin
   Result := nil;
   for i := 0 to high(FOraSchemes) do
   begin
-    if FOraSchemes[i].FId = aId then
+    if FOraSchemes[i].Id = aId then
     begin
       Result := FOraSchemes[i];
       Exit;
@@ -671,9 +672,11 @@ var
   ItemBody: WideString;
 begin
   try
-    iScheme := TORDESYProjectList(FProjectListRef).GetOraSchemeById(aSchemeId);
+    if not Assigned(TORDESYProjectList(ProjectListRef)) then
+      Exit;
+    iScheme := TORDESYProjectList(ProjectListRef).GetOraSchemeById(aSchemeId);
     iModule := GetModuleById(aModuleId);
-    iBase := TORDESYProjectList(FProjectListRef).GetOraBaseById(aBaseId);
+    iBase := TORDESYProjectList(ProjectListRef).GetOraBaseById(aBaseId);
     if (not Assigned(iScheme) or not Assigned(iModule) or not Assigned(iBase))
       then
       raise Exception.Create('Some of objects not created!');
@@ -683,8 +686,8 @@ begin
     begin
       Query.Active := false;
       Query.SQL.Text :=
-        'select text from sys.all_sources where ' + 'owner = ''' +
-        iScheme.Login + '''' + 'name = ''' + Name + '''' + 'type = ''' +
+        'select text from sys.all_source where ' + 'owner = ''' +
+        iScheme.Login + '''' + ' and name = ''' + aName + '''' + ' and type = ''' +
         TOraItem.GetItemSqlType(aType) + ''' ' + 'order by line';
       Query.Active := true;
       firstItem := true;
@@ -692,27 +695,28 @@ begin
       begin
         if firstItem then
           ItemBody := ItemBody + 'CREATE OR REPLACE ' + Query.Fields[0]
-            .AsString + #13#10;
-        ItemBody := ItemBody + Query.Fields[0].AsString + #13#10;
+            .AsString
+        else
+          ItemBody := ItemBody + Query.Fields[0].AsString;
         firstItem := false;
         Query.Next;
       end;
       iItem := TOraItem.Create(iModule, iModule.GetFreeItemId, aBaseId,
-        aSchemeId, aName, ItemBody, aType);
+        aSchemeId, aName, AdjustLineBreaks(ItemBody), aType);
       iModule.AddOraItem(iItem);
     end;
   except
     on E: Exception do
     begin
-{$IFDEF Debug}
+      {$IFDEF Debug}
       AddToLog(ClassName + ' | WrapItem | ' + E.Message);
       MessageBox(Application.Handle, PChar
           (ClassName + ' | WrapItem | ' + E.Message), PChar
           (Application.Title + ' - Error'), 48);
-{$ELSE}
+      {$ELSE}
       MessageBox(Application.Handle, PChar(E.Message), PChar
           (Application.Title + ' - Error'), 48);
-{$ENDIF}
+      {$ENDIF}
     end;
   end;
 end;
@@ -1229,7 +1233,7 @@ begin
         // Datecreate
         FileRead(iHandle, iDateCreate, SizeOf(iDateCreate));
         // Creating project
-        iProject := TORDESYProject.Create(iId, iName, iDescription, iCreator,
+        iProject := TORDESYProject.Create(Self ,iId, iName, iDescription, iCreator,
           iDateCreate);
         iProject.OnChange := OnChange;
         // Free

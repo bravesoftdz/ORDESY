@@ -964,7 +964,8 @@ end;}
 
 procedure TfmMain.WrapItem(Sender: TObject);
 begin
-  ShowWrapDialog(TORDESYModule(tvMain.Selected.Data), ProjectList);
+  if ShowWrapDialog(TORDESYModule(tvMain.Selected.Data), ProjectList) then
+    UpdateGUI;
 end;
 
 end.
