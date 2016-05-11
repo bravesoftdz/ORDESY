@@ -77,7 +77,6 @@ object fmMain: TfmMain
       Height = 36
       Align = alBottom
       TabOrder = 2
-      OnClick = pnlBottomClick
       ExplicitTop = 393
       DesignSize = (
         552
@@ -203,11 +202,13 @@ object fmMain: TfmMain
       end
       object miEditProject: TMenuItem
         Caption = 'Edit project'
+        OnClick = EditProject
       end
       object miModule: TMenuItem
         Caption = 'Module'
         object AddModule1: TMenuItem
           Caption = 'Add Module'
+          OnClick = AddModule
         end
         object miModuleList: TMenuItem
           Caption = 'Module List'

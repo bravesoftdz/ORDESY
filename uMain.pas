@@ -103,7 +103,6 @@ type
     procedure miSchemeListClick(Sender: TObject);
     procedure miAddSchemeClick(Sender: TObject);
     procedure tvMainExpanded(Sender: TObject; Node: TTreeNode);
-    procedure pnlBottomClick(Sender: TObject);
   private
     AppOptions: TOptions;
     TreeStateList: TLazyStateList;
@@ -260,7 +259,7 @@ end;
 
 procedure TfmMain.EditProject(Sender: TObject);
 begin
-  if ShowProjectEditDialog(TORDESYProject(tvMain.Selected.Data)) then
+  if Assigned(tvMain.Selected) and Assigned(tvMain.Selected.Data) and (TObject(tvMain.Selected.Data) is TORDESYProject) and ShowProjectEditDialog(TORDESYProject(tvMain.Selected.Data)) then
     UpdateGUI;
 end;
 
@@ -630,11 +629,6 @@ begin
       Result:= True;
 end;
 
-procedure TfmMain.pnlBottomClick(Sender: TObject);
-begin
-  ShowMessage(TreeStateList.ShowContents);
-end;
-
 procedure TfmMain.ppmMainPopup(Sender: TObject);
 var
   i, n: integer;
@@ -661,6 +655,7 @@ var
   ModuleMenu: TMenuItem;
   BaseMenu: TMenuItem;
   SchemeMenu: TMenuItem;
+  ItemMenu: TMenuItem;
   MenuItem: TMenuItem;
 begin
   try
@@ -688,19 +683,19 @@ begin
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= AddProject;
-      MenuItem.Caption:= 'Add project';
+      MenuItem.Caption:= 'Add';
       MenuItem.Tag:= 0;
       ProjectMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= EditProject;
-      MenuItem.Caption:= 'Edit project';
+      MenuItem.Caption:= 'Edit';
       MenuItem.Tag:= 1;
       ProjectMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= DeleteProject;
-      MenuItem.Caption:= 'Delete project';
+      MenuItem.Caption:= 'Delete';
       MenuItem.Tag:= 1;
       ProjectMenu.Add(MenuItem);
     //
@@ -711,19 +706,19 @@ begin
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= AddModule;
-      MenuItem.Caption:= 'Add module';
+      MenuItem.Caption:= 'Add';
       MenuItem.Tag:= 0;
       ModuleMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= EditModule;
-      MenuItem.Caption:= 'Edit module';
+      MenuItem.Caption:= 'Edit';
       MenuItem.Tag:= 11;
       ModuleMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= DeleteModule;
-      MenuItem.Caption:= 'Delete module';
+      MenuItem.Caption:= 'Delete';
       MenuItem.Tag:= 11;
       ModuleMenu.Add(MenuItem);
       //
@@ -740,19 +735,19 @@ begin
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= AddBase;
-      MenuItem.Caption:= 'Add base';
+      MenuItem.Caption:= 'Add';
       MenuItem.Tag:= 0;
       BaseMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= OnEditBase;
-      MenuItem.Caption:= 'Edit base';
+      MenuItem.Caption:= 'Edit';
       MenuItem.Tag:= 16;
       BaseMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= DeleteBase;
-      MenuItem.Caption:= 'Delete base';
+      MenuItem.Caption:= 'Delete';
       MenuItem.Tag:= 16;
       BaseMenu.Add(MenuItem);
     //
@@ -763,21 +758,56 @@ begin
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= AddScheme;
-      MenuItem.Caption:= 'Add scheme';
+      MenuItem.Caption:= 'Add';
       MenuItem.Tag:= 0;
       SchemeMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= OnEditScheme;
-      MenuItem.Caption:= 'Edit scheme';
+      MenuItem.Caption:= 'Edit';
       MenuItem.Tag:= 21;
       SchemeMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
       MenuItem.OnClick:= DeleteScheme;
-      MenuItem.Caption:= 'Delete scheme';
+      MenuItem.Caption:= 'Delete';
       MenuItem.Tag:= 21;
       SchemeMenu.Add(MenuItem);
+    //
+    ItemMenu:= TMenuItem.Create(ppmMain);
+    ItemMenu.Caption:= 'Item';
+    ItemMenu.Tag:= 0;
+    ppmMain.Items.Add(ItemMenu);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      //MenuItem.OnClick:= NewItem;
+      MenuItem.Caption:= 'New';
+      MenuItem.Tag:= 26;
+      ItemMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      MenuItem.OnClick:= WrapItem;
+      MenuItem.Caption:= 'Wrap';
+      MenuItem.Tag:= 26;
+      ItemMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      //MenuItem.OnClick:= DeployItem;
+      MenuItem.Caption:= 'Deploy';
+      MenuItem.Tag:= 26;
+      ItemMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      //MenuItem.OnClick:= ItemOptions;
+      MenuItem.Caption:= 'Options';
+      MenuItem.Tag:= 26;
+      ItemMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      //MenuItem.OnClick:= DeleteItem;
+      MenuItem.Caption:= 'Delete';
+      MenuItem.Tag:= 26;
+      ItemMenu.Add(MenuItem);
   except
     on E: Exception do
     begin
@@ -963,8 +993,16 @@ begin
 end;}
 
 procedure TfmMain.WrapItem(Sender: TObject);
+var
+  iModule: TORDESYModule;
 begin
-  if ShowWrapDialog(TORDESYModule(tvMain.Selected.Data), ProjectList) then
+  if Assigned(tvMain.Selected) and Assigned(tvMain.Selected.Data) and (TObject(tvMain.Selected.Data) is TORDESYModule) then
+    iModule:= TORDESYModule(tvMain.Selected.Data)
+  else if Assigned(tvMain.Selected) and Assigned(tvMain.Selected.Data) and (TObject(tvMain.Selected.Data) is TOraItem) then
+    iModule:= TORDESYModule(TOraItem(tvMain.Selected.Data).ModuleRef)
+  else
+    Exit;
+  if ShowWrapDialog(iModule, ProjectList) then
     UpdateGUI;
 end;
 
