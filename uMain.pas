@@ -99,7 +99,6 @@ type
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
     procedure miBaseListClick(Sender: TObject);
-    procedure FormResize(Sender: TObject);
     procedure miSchemeListClick(Sender: TObject);
     procedure miAddSchemeClick(Sender: TObject);
     procedure tvMainExpanded(Sender: TObject; Node: TTreeNode);
@@ -279,11 +278,6 @@ begin
   InitApp;
 end;
 
-procedure TfmMain.FormResize(Sender: TObject);
-begin
-  SaveFormSize(fmMain.Width, fmMain.Height);
-end;
-
 procedure TfmMain.FreeApp(var Action: TCloseAction);
 var
   reply: word;
@@ -309,6 +303,7 @@ begin
         AppOptions.SetOption('GUI', 'GroupList', IntToStr(tvMain.Width));
         AppOptions.SetOption('GUI', 'FormLeft', inttostr(fmMain.Left));
         AppOptions.SetOption('GUI', 'FormTop', inttostr(fmMain.Top));
+        SaveFormSize(fmMain.Width, fmMain.Height);
         if not AppOptions.SaveUserOptions() then
           raise Exception.Create('Cant''t save user options!');
         AppOptions.Free;
@@ -657,13 +652,29 @@ var
   SchemeMenu: TMenuItem;
   ItemMenu: TMenuItem;
   MenuItem: TMenuItem;
+  iOption: string;
 begin
   try
     edtUserName.Text:= AppOptions.UserName;
     try
-      tvMain.Width:= strtoint(AppOptions.GetOption('GUI', 'GroupList'));
-      fmMain.Width:= strtoint(AppOptions.GetOption('GUI', 'FormWidth'));
-      fmMain.Height:= strtoint(AppOptions.GetOption('GUI', 'FormHeight'));
+      if not AppOptions.IsEmpty then
+      begin
+        iOption:= AppOptions.GetOption('GUI', 'GroupList');
+        if iOption <> '' then
+          tvMain.Width:= strtoint(iOption);
+        iOption:= AppOptions.GetOption('GUI', 'FormWidth');
+        if iOption <> '' then
+          fmMain.Width:= strtoint(iOption);
+        iOption:= AppOptions.GetOption('GUI', 'FormHeight');
+        if iOption <> '' then
+          fmMain.Height:= strtoint(iOption);
+        iOption:= AppOptions.GetOption('GUI', 'FormLeft');
+        if iOption <> '' then
+          fmMain.Left:= strtoint(iOption);
+        iOption:= AppOptions.GetOption('GUI', 'FormTop');
+        if iOption <> '' then
+          fmMain.Top:= strtoint(iOption);
+      end;
     except
       on E: Exception do
       begin
@@ -879,7 +890,6 @@ begin
   begin
     AppOptions.SetOption('GUI', 'FormWidth', inttostr(aWidth)); // leak memory here, idk what the reason
     AppOptions.SetOption('GUI', 'FormHeight', inttostr(aHeight)); // leak memory here, idk what the reason
-    //ShowMessage(inttostr(AppOptions.Count));
   end;
 end;
 

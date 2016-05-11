@@ -16,7 +16,7 @@ uses
   Windows, Classes, SysUtils, IniFiles, Forms;
 
 type
-  TOption = packed record
+  TOption = record
     Section: string;
     Name: string;
     Value: string;
@@ -173,6 +173,7 @@ function TOptions.SetOption(const aSection, aName, aValue: string): boolean;
 var
   i: integer;
   Founded: boolean;
+  iItem: TOption;
 begin
   Result:= False;
   try
@@ -190,9 +191,11 @@ begin
     if not Founded then
     begin
       SetLength(FOptions, length(FOptions) + 1);
-      FOptions[high(FOptions)].Section:= aSection;
-      FOptions[high(FOptions)].Name:= aName;
-      FOptions[high(FOptions)].Value:= aValue;
+      iItem.Section:= aSection;
+      iItem.Name:= aName;
+      iItem.Value:= aValue;
+      FOptions[high(FOptions)]:= iItem;
+      iItem.Clear;
     end;
     FLastChange:= GetTime;
     FEmpty:= false;

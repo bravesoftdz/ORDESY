@@ -14,10 +14,9 @@ object fmMain: TfmMain
   Font.Style = []
   Menu = mmMain
   OldCreateOrder = False
-  Position = poDesktopCenter
+  Position = poDesigned
   OnClose = FormClose
   OnCreate = FormCreate
-  OnResize = FormResize
   PixelsPerInch = 96
   TextHeight = 13
   object pnlMain: TPanel
