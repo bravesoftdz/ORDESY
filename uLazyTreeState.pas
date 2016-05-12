@@ -1,3 +1,21 @@
+{
+Oracle Deploy System ver.1.0 (ORDESY)
+by Volodymyr Sedler aka scribe
+2016
+
+Desc: wrap/deploy/save objects of oracle database.
+No warranty of using this program.
+Just Free.
+
+With bugs, suggestions please write to justscribe@yahoo.com
+On Github: github.com/justscribe/ORDESY
+
+Module to save current expand state of TTreeView after update.
+
+classes:
+  TLazyTreeState - record of info about node state
+  TLazyStateList - the list of LazyTreeState, saving/loading/reading/appending states.
+}
 unit uLazyTreeState;
 
 interface

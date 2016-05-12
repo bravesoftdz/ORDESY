@@ -1,8 +1,18 @@
 {
-@Name: Unit "Options"
-@creator: V.SEDLER aka scribe
+Oracle Deploy System ver.1.0 (ORDESY)
+by Volodymyr Sedler aka scribe
+2016
 
-Сохранение и загрузка настроек пограммы в текстовом виде (используется *.ini)
+Desc: wrap/deploy/save objects of oracle database.
+No warranty of using this program.
+Just Free.
+
+With bugs, suggestions please write to justscribe@yahoo.com
+On Github: github.com/justscribe/ORDESY
+
+As a part of project.
+Desc: saving/loading options to *.ini.
+Warning: there some problems with memory leaks, use carefuly and check with ReportMemoryLeaksOnShutdown := true;.
 }
 unit uOptions;
 

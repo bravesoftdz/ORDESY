@@ -1,3 +1,17 @@
+{
+Oracle Deploy System ver.1.0 (ORDESY)
+by Volodymyr Sedler aka scribe
+2016
+
+Desc: wrap/deploy/save objects of oracle database.
+No warranty of using this program.
+Just Free.
+
+With bugs, suggestions please write to justscribe@yahoo.com
+On Github: github.com/justscribe/ORDESY
+
+As a part of project.
+}
 unit uExplode;
 
 interface
@@ -6,7 +20,6 @@ procedure Explode(var a: array of string; Border, S: string);
 
 implementation
 
-// Разбиение строки на массив строк
 procedure Explode(var a: array of string; Border, S: string);
 var
   S2: string;

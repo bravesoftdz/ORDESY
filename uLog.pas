@@ -1,3 +1,18 @@
+{
+Oracle Deploy System ver.1.0 (ORDESY)
+by Volodymyr Sedler aka scribe
+2016
+
+Desc: wrap/deploy/save objects of oracle database.
+No warranty of using this program.
+Just Free.
+
+With bugs, suggestions please write to justscribe@yahoo.com
+On Github: github.com/justscribe/ORDESY
+
+As a part of project.
+Desc: logging the errors to log.txt.
+}
 unit uLog;
 
 interface

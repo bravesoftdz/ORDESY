@@ -1,19 +1,30 @@
 {
+Oracle Deploy System ver.1.0 (ORDESY)
+by Volodymyr Sedler aka scribe
+2016
 
-edt - TEdit
-btn - TButton
-pnl - TPanel
-lbl - TLabel
-gbx - TGroupBox
-cbx - TComboBox
-chbx - TCheckBox
-lbx - TListBox
-spl - TSplitter
-mmo - TMemo
-tv - TTreeView
-mm - TMainMenu
-mi - TMenuItem
-fm - TForm
+Desc: wrap/deploy/save objects of oracle database.
+No warranty of using this program.
+Just Free.
+
+With bugs, suggestions please write to justscribe@yahoo.com
+On Github: github.com/justscribe/ORDESY
+
+reductions:
+   edt - TEdit
+   btn - TButton
+   pnl - TPanel
+   lbl - TLabel
+   gbx - TGroupBox
+   cbx - TComboBox
+  chbx - TCheckBox
+   lbx - TListBox
+   spl - TSplitter
+   mmo - TMemo
+    tv - TTreeView
+    mm - TMainMenu
+    mi - TMenuItem
+    fm - TForm
 
 }
 unit uMain;
@@ -71,7 +82,7 @@ type
     AddModule1: TMenuItem;
     miAddBase: TMenuItem;
     miItem: TMenuItem;
-    miItemList: TMenuItem;
+    miItemOptions: TMenuItem;
     miWrapItem: TMenuItem;
     miDeployItem: TMenuItem;
     procedure miExitClick(Sender: TObject);
@@ -111,11 +122,11 @@ type
     ProjectList: TORDESYProjectList;
     function CanPopup(const aTag: integer; aObject: Pointer): boolean;
     procedure SaveFormSize(const aWidth, aHeight: integer);
+    procedure PrepareOptions;
+    procedure PrepareProjects;
+    procedure PrepareTreeState;
     procedure PrepareGUI;
     procedure UpdateGUI;
-    procedure PrepareOptions;
-    procedure PrepareTreeState;
-    procedure PrepareProjects;
   public
     procedure InitApp;
     procedure FreeApp(var Action: TCloseAction);
@@ -841,6 +852,13 @@ begin
       MenuItem:= TMenuItem.Create(ppmMain);
       //MenuItem.OnClick:= DeployItem;
       MenuItem.Caption:= 'Deploy';
+      MenuItem.Tag:= 26;
+      ItemMenu.Add(MenuItem);
+      //
+      MenuItem:= TMenuItem.Create(ppmMain);
+      //MenuItem.OnClick:= DeployItem;
+      MenuItem.Caption:= 'Localize';
+      MenuItem.Hint:= 'saving on this computer';
       MenuItem.Tag:= 26;
       ItemMenu.Add(MenuItem);
       //

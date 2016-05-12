@@ -1,3 +1,26 @@
+{
+Oracle Deploy System ver.1.0 (ORDESY)
+by Volodymyr Sedler aka scribe
+2016
+
+Desc: wrap/deploy/save objects of oracle database.
+No warranty of using this program.
+Just Free.
+
+With bugs, suggestions please write to justscribe@yahoo.com
+On Github: github.com/justscribe/ORDESY
+
+Main unit.
+
+classes:
+  TOraItem           - item, some object of database, now supports (PROCEDURE, FUNCTION, PACKAGE)
+  TOraScheme         - scheme, login + password of oracle scheme
+  TOraBase           - base, name of database that we can to connect to
+  TORDESYModule      - module, agregating the database items
+  TORDESYProject     - project, agregating the modules
+  TORDESYProjectList - the list of projects (saving/loading)
+}
+
 unit uORDESY;
 
 interface

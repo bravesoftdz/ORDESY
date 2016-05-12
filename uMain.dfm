@@ -223,8 +223,9 @@ object fmMain: TfmMain
         object miDeployItem: TMenuItem
           Caption = 'Deploy'
         end
-        object miItemList: TMenuItem
-          Caption = 'Item list'
+        object miItemOptions: TMenuItem
+          Caption = 'Options'
+          OnClick = ItemOptions
         end
       end
       object miShow: TMenuItem
