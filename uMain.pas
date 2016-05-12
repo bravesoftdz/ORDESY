@@ -33,10 +33,7 @@ interface
 
 uses
   // ORDESY Modules
-  {$IFDEF Debug}
-  uLog,
-  {$ENDIF}
-  uORDESY, uExplode, uShellFuncs, uOptions, uWrap, uLazyTreeState,
+  uORDESY, uExplode, uShellFuncs, uOptions, uWrap, uLazyTreeState, uErrorHandle,
   uSchemeDialog, uBaseList, uSchemeList, uProjectDialogs, uItemOptions, // Dialogs
   // Delphi Modules
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
@@ -102,13 +99,15 @@ type
     procedure DeleteModule(Sender: TObject);
     procedure AddBase(Sender: TObject);
     procedure OnEditBase(Sender: TObject); // Edit base by ProjectList
-    procedure EditBase(aBase: TOraBase); // Edit base by BaseList
+    function EditBase(aBase: TOraBase): boolean;   // Edit base by BaseList
     procedure DeleteBase(Sender: TObject);
     procedure AddScheme(Sender: TObject);
-    procedure OnEditScheme(Sender: TObject); // Edit scheme by ProjectList
+    procedure OnEditScheme(Sender: TObject);   // Edit scheme by ProjectList
     procedure EditScheme(aScheme: TOraScheme); // Edit scheme by SchemeList
     procedure DeleteScheme(Sender: TObject);
+    procedure NewItem(Sender: TObject);
     procedure ItemOptions(Sender: TObject);
+    procedure DeleteItem(Sender: TObject);
     procedure tvMainClick(Sender: TObject);
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
@@ -120,7 +119,8 @@ type
     AppOptions: TOptions;
     TreeStateList: TLazyStateList;
     ProjectList: TORDESYProjectList;
-    function CanPopup(const aTag: integer; aObject: Pointer): boolean;
+    function NodeWithObject(aNode: TTreeNode): boolean;
+    function CanPopup(const aTag: integer; aObject: TObject): boolean;
     procedure SaveFormSize(const aWidth, aHeight: integer);
     procedure PrepareOptions;
     procedure PrepareProjects;
@@ -166,14 +166,33 @@ begin
     end;
   except
     on E: Exception do
+      HandleError([ClassName, 'DeleteBase', E.Message]);
+  end;
+end;
+
+procedure TfmMain.DeleteItem(Sender: TObject);
+var
+  reply: word;
+  Module: TORDESYModule;
+begin
+  try
+    if not Assigned(tvMain.Selected) or not Assigned(tvMain.Selected.Data) or not (TObject(tvMain.Selected.Data) is TOraItem) then
+      Exit;
+    reply:= MessageBox(Handle, PChar('Delete item?' + #13#10), PChar('Confirm'), 36);
+    if reply = IDYES then
     begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | DeleteBase | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | DeleteBase | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
+      Module:= TORDESYModule(TOraItem(tvMain.Selected.Data).ModuleRef);
+      if Assigned(Module) then
+      begin
+        Module.RemoveOraItemById(TOraItem(tvMain.Selected.Data).Id);
+        tvMain.Selected.Data:= nil;
+        tvMain.Deselect(tvMain.Selected);
+        UpdateGUI;
+      end;
     end;
+  except
+    on E: Exception do
+      HandleError([ClassName, 'DeleteItem', E.Message]);
   end;
 end;
 
@@ -182,16 +201,21 @@ var
   reply: word;
   Project: TORDESYProject;
 begin
-  if not Assigned(tvMain.Selected) or not Assigned(tvMain.Selected.Data) or not (TObject(tvMain.Selected.Data) is TORDESYModule) then
-    Exit;
-  Project:= TORDESYProject(TORDESYModule(tvMain.Selected.Data).ProjectRef);
-  reply:= MessageBox(Handle, PChar('Delete module?' + #13#10), PChar('Confirm'), 36);
-  if reply = IDYES then
-  begin
-    Project.RemoveModuleById(TORDESYModule(tvMain.Selected.Data).Id);
-    tvMain.Selected.Data:= nil;
-    tvMain.Deselect(tvMain.Selected);
-    UpdateGUI;
+  try
+    if not Assigned(tvMain.Selected) or not Assigned(tvMain.Selected.Data) or not (TObject(tvMain.Selected.Data) is TORDESYModule) then
+      Exit;
+    Project:= TORDESYProject(TORDESYModule(tvMain.Selected.Data).ProjectRef);
+    reply:= MessageBox(Handle, PChar('Delete module?' + #13#10), PChar('Confirm'), 36);
+    if reply = IDYES then
+    begin
+      Project.RemoveModuleById(TORDESYModule(tvMain.Selected.Data).Id);
+      tvMain.Selected.Data:= nil;
+      tvMain.Deselect(tvMain.Selected);
+      UpdateGUI;
+    end;
+  except
+    on E: Exception do
+      HandleError([ClassName, 'DeleteModule', E.Message]);
   end;
 end;
 
@@ -200,14 +224,21 @@ var
   reply: word;
   Project: TORDESYProject;
 begin
-  Project:= TORDESYProject(tvMain.Selected.Data);
-  reply:= MessageBox(Handle, PChar('Delete project?' + #13#10), PChar('Confirm'), 36);
-  if reply = IDYES then
-  begin
-    ProjectList.RemoveProjectById(Project.Id);
-    tvMain.Selected.Data:= nil;
-    tvMain.Deselect(tvMain.Selected);
-    UpdateGUI;
+  try
+    if not Assigned(tvMain.Selected) or not Assigned(tvMain.Selected.Data) or not (TObject(tvMain.Selected.Data) is TORDESYProject) then
+      Exit;
+    Project:= TORDESYProject(tvMain.Selected.Data);
+    reply:= MessageBox(Handle, PChar('Delete project?' + #13#10), PChar('Confirm'), 36);
+    if reply = IDYES then
+    begin
+      ProjectList.RemoveProjectById(Project.Id);
+      tvMain.Selected.Data:= nil;
+      tvMain.Deselect(tvMain.Selected);
+      UpdateGUI;
+    end;
+  except
+    on E: Exception do
+      HandleError([ClassName, 'DeleteProject', E.Message]);
   end;
 end;
 
@@ -217,31 +248,37 @@ var
   iSelected: TTreeNode;
   reply: word;
 begin
-  iSelected:= tvMain.Selected;
-  if not Assigned(iSelected) then
-    Exit;
-  if TObject(iSelected.Data) is TOraScheme then
-    iScheme:= TOraScheme(iSelected.Data)
-  else if TObject(iSelected.Data) is TOraItem then
-    iScheme:= ProjectList.GetOraSchemeById(TOraItem(iSelected.Data).SchemeId)
-  else
-    Exit;
-  if not Assigned(iScheme) then
-    Exit;
-  reply:= MessageBox(Handle, PChar('Delete scheme: ' + iScheme.Login + '?' + #13#10), PChar('Confirm'), 36);
-  if reply = IDYES then
-  begin
-    ProjectList.RemoveSchemeById(iScheme.Id);
-    tvMain.Selected.Data:= nil;
-    tvMain.Deselect(tvMain.Selected);
-    UpdateGUI;
+  try
+    iSelected:= tvMain.Selected;
+    if not Assigned(iSelected) or not Assigned(iSelected.Data) then
+      Exit;
+    if TObject(iSelected.Data) is TOraScheme then
+      iScheme:= TOraScheme(iSelected.Data)
+    else if TObject(iSelected.Data) is TOraItem then
+      iScheme:= ProjectList.GetOraSchemeById(TOraItem(iSelected.Data).SchemeId)
+    else
+      Exit;
+    if not Assigned(iScheme) then
+      Exit;
+    reply:= MessageBox(Handle, PChar('Delete scheme: ' + iScheme.Login + '?' + #13#10), PChar('Confirm'), 36);
+    if reply = IDYES then
+    begin
+      ProjectList.RemoveSchemeById(iScheme.Id);
+      tvMain.Selected.Data:= nil;
+      tvMain.Deselect(tvMain.Selected);
+      UpdateGUI;
+    end;
+  except
+    on E: Exception do
+      HandleError([ClassName, 'DeleteScheme', E.Message]);
   end;
 end;
 
-procedure TfmMain.EditBase(aBase: TOraBase);
+function TfmMain.EditBase(aBase: TOraBase): boolean;
 var
   BaseName: string;
 begin
+  Result:= false;
   try
     BaseName:= aBase.Name;
     if InputQuery('Edit base', 'Change base name:', BaseName) then
@@ -250,18 +287,12 @@ begin
       begin
         aBase.Name:= BaseName;
         UpdateGUI;
+        Result:= true;
       end;
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | AddBase | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | AddBase | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'EditBase', E.Message]);
   end;
 end;
 
@@ -331,15 +362,8 @@ begin
       end;
     end;
   except
-  on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | FreeApp | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | FreeApp | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+    on E: Exception do
+      HandleError([ClassName, 'FreeApp', E.Message]);
   end;
 end;
 
@@ -409,7 +433,7 @@ procedure TfmMain.ViewProjects(aTreeView: TTreeView);
   end;
 
 var
-  iPL, iM, iB, iSc, iI: integer;
+  iP, iM, iB, iSc, iI: integer;
   iProject: TORDESYProject;
   iModule: TORDESYModule;
   iBase: TOraBase;
@@ -417,51 +441,54 @@ var
   iItem: TOraItem;
   ProjectAdded, ModuleAdded, BaseAdded, SchemeAdded, ItemAdded: TTreeNode;
 begin
-  aTreeView.Items.Clear;
-  if ProjectList.ProjectCount <= 0 then
-    Exit;
-  aTreeView.Items.BeginUpdate;
-  for iPL := 0 to ProjectList.ProjectCount - 1 do
-  begin
-    iProject:= ProjectList.GetProjectByIndex(iPL);
-    ProjectAdded:= aTreeView.Items.AddObject(nil, iProject.Name, iProject);
-    for iM := 0 to iProject.ModuleCount - 1 do
+  try
+    aTreeView.Items.BeginUpdate;
+    aTreeView.Items.Clear;
+    if ProjectList.ProjectCount <= 0 then
+      Exit;
+    for iP := 0 to ProjectList.ProjectCount - 1 do
     begin
-      iModule:= iProject.GetModuleByIndex(iM);
-      ModuleAdded:= aTreeView.Items.AddChildObject(ProjectAdded, iModule.Name, iModule);
-      for iI := 0 to iModule.OraItemCount - 1 do
+      iProject:= ProjectList.GetProjectByIndex(iP);
+      ProjectAdded:= aTreeView.Items.AddObject(nil, iProject.Name, iProject);
+      for iM := 0 to iProject.ModuleCount - 1 do
       begin
-        iItem:= iModule.GetOraItemByIndex(iI);
-        iBase:= ProjectList.GetOraBaseById(iItem.BaseId);
-        iScheme:= ProjectList.GetOraSchemeById(iItem.SchemeId);
-        BaseAdded:= nil;
-        SchemeAdded:= nil;
-        if Assigned(iBase) then
+        iModule:= iProject.GetModuleByIndex(iM);
+        ModuleAdded:= aTreeView.Items.AddChildObject(ProjectAdded, iModule.Name, iModule);
+        for iI := 0 to iModule.OraItemCount - 1 do
         begin
-          BaseAdded:= BaseInModule(iProject.Id, iModule.Id, iItem.BaseId);
-          if not Assigned(BaseAdded) then
-            BaseAdded:= aTreeView.Items.AddChildObject(ModuleAdded, iBase.Name, iBase);
-        end
-        else
-          // No such base in project
-          BaseAdded:= aTreeView.Items.AddChildObject(ModuleAdded, '?', nil);
-        if Assigned(iScheme) then
-        begin
-          SchemeAdded:= SchemeInBase(iProject.Id, iModule.Id, iItem.BaseId, iItem.SchemeId);
-          if not Assigned(SchemeAdded) then
-            SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, iScheme.Login, iScheme);
-          ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
-        end
-        else
-        begin
-          // No such scheme in project
-          SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, '?', nil);
-          ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
+          iItem:= iModule.GetOraItemByIndex(iI);
+          iBase:= ProjectList.GetOraBaseById(iItem.BaseId);
+          iScheme:= ProjectList.GetOraSchemeById(iItem.SchemeId);
+          BaseAdded:= nil;
+          SchemeAdded:= nil;
+          if Assigned(iBase) then
+          begin
+            BaseAdded:= BaseInModule(iProject.Id, iModule.Id, iItem.BaseId);
+            if not Assigned(BaseAdded) then
+              BaseAdded:= aTreeView.Items.AddChildObject(ModuleAdded, iBase.Name, iBase);
+          end
+          else
+            // No such base in project
+            BaseAdded:= aTreeView.Items.AddChildObject(ModuleAdded, '?', nil);
+          if Assigned(iScheme) then
+          begin
+            SchemeAdded:= SchemeInBase(iProject.Id, iModule.Id, iItem.BaseId, iItem.SchemeId);
+            if not Assigned(SchemeAdded) then
+              SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, iScheme.Login, iScheme);
+            ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
+          end
+          else
+          begin
+            // No such scheme in project
+            SchemeAdded:= aTreeView.Items.AddChildObject(BaseAdded, '?', nil);
+            ItemAdded:= aTreeView.Items.AddChildObject(SchemeAdded, iItem.Name, iItem);
+          end;
         end;
       end;
     end;
+  finally
+    aTreeView.Items.EndUpdate;
   end;
-  aTreeView.Items.EndUpdate;
 end;
 
 procedure TfmMain.AddModule(Sender: TObject);
@@ -525,6 +552,18 @@ begin
     UpdateGUI;
 end;
 
+procedure TfmMain.NewItem(Sender: TObject);
+begin
+  //
+end;
+
+function TfmMain.NodeWithObject(aNode: TTreeNode): boolean;
+begin
+  Result:= false;
+  if Assigned(aNode) and Assigned(aNode.Data) then
+    Result:= true;
+end;
+
 procedure TfmMain.OnEditBase(Sender: TObject);
 var
   BaseName: string;
@@ -534,11 +573,13 @@ label
 begin
   try
     iSelected:= tvMain.Selected;
+    if not NodeWithObject(iSelected) then
+      Exit;
     retry:
     if TObject(iSelected.Data) is TOraBase then
       BaseName:= TOraBase(iSelected.Data).Name
     else if TObject(iSelected.Data) is TOraScheme then
-      if (iSelected.Parent <> nil) and (iSelected.Parent.Data <> nil) and (TObject(iSelected.Parent.Data) is TOraBase) then
+      if NodeWithObject(iSelected.Parent) and (TObject(iSelected.Parent.Data) is TOraBase) then
         BaseName:= TOraBase(iSelected.Parent.Data).Name
     else
       Exit;
@@ -554,14 +595,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | AddBase | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | AddBase | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'OnEditBase', E.Message]);
   end;
 end;
 
@@ -573,10 +607,12 @@ var
 begin
   try
     iSelected:= tvMain.Selected;
+    if not NodeWithObject(iSelected) then
+      Exit;
     if TObject(iSelected.Data) is TOraScheme then
       iScheme:= TOraScheme(iSelected.Data)
     else if TObject(iSelected.Data) is TOraItem then
-      if (iSelected.Parent <> nil) and (iSelected.Parent.Data <> nil) and (TObject(iSelected.Parent.Data) is TOraScheme) then
+      if NodeWithObject(iSelected.Parent) and (TObject(iSelected.Parent.Data) is TOraScheme) then
         iScheme:= TOraScheme(iSelected.Parent.Data)
     else
       Exit;
@@ -584,14 +620,7 @@ begin
       EditScheme(iScheme);
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | AddBase | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | AddBase | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'OnEditScheme', E.Message]);
   end;
 end;
 
@@ -607,39 +636,33 @@ begin
     begin
       if (BaseName <> '') and (Length(BaseName) <= 255) then
       begin
-        ProjectList.AddOraBase(TOraBase.Create(ProjectList ,ProjectList.GetFreeBaseId, BaseName));
-        UpdateGUI;
+        if Assigned(ProjectList) then
+          if ProjectList.AddOraBase(TOraBase.Create(ProjectList ,ProjectList.GetFreeBaseId, BaseName)) then
+            UpdateGUI;
       end
       else
         goto retry;
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | AddBase | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | AddBase | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'AddBase', E.Message]);
   end;
 end;
 
-function TfmMain.CanPopup(const aTag: integer; aObject: Pointer): boolean;
+function TfmMain.CanPopup(const aTag: integer; aObject: TObject): boolean;
 begin
   Result:= false;
-  if aObject <> nil then
+  if Assigned(aObject) then
   begin
-    if (TObject(aObject) is TORDESYProject) and (aTag >= 1) and (aTag <= 10) or (aTag = 0) then
+    if ((aObject is TORDESYProject) and (aTag >= 1) and (aTag <= 10)) or (aTag = 0) then
       Result:= true;
-    if (TObject(aObject) is TORDESYModule) and (aTag >= 5) and (aTag <= 15) or (aTag = 0) then
+    if ((aObject is TORDESYModule) and (aTag >= 5) and (aTag <= 15)) or (aTag = 0) then
       Result:= true;
-    if (TObject(aObject) is TOraBase) and (aTag >= 10) and (aTag <= 20) or (aTag = 0) then
+    if ((aObject is TOraBase) and (aTag >= 10) and (aTag <= 20)) or (aTag = 0) then
       Result:= true;
-    if (TObject(aObject) is TOraScheme) and (aTag >= 15) and (aTag <= 25) or (aTag = 0) then
+    if ((aObject is TOraScheme) and (aTag >= 15) and (aTag <= 25)) or (aTag = 0) then
       Result:= True;
-    if (TObject(aObject) is TOraItem) and (aTag >= 20) and (aTag <= 30) or (aTag = 0) then
+    if ((aObject is TOraItem) and (aTag >= 20) and (aTag <= 30)) or (aTag = 0) then
       Result:= true;
   end
   else
@@ -656,13 +679,13 @@ begin
     for n := 0 to ppmMain.Items[i].Count - 1 do
       if Assigned(tvMain.Selected)  then
       begin
-        ppmMain.Items[i].Visible:= CanPopup(ppmMain.Items[i].Tag , tvMain.Selected.Data);
-        ppmMain.Items[i].Items[n].Visible:= CanPopup(ppmMain.Items[i].Items[n].Tag , tvMain.Selected.Data);
+        ppmMain.Items[i].Visible:= CanPopup(ppmMain.Items[i].Tag, TObject(tvMain.Selected.Data));
+        ppmMain.Items[i].Items[n].Visible:= CanPopup(ppmMain.Items[i].Items[n].Tag, TObject(tvMain.Selected.Data));
       end
       else
       begin
-        ppmMain.Items[i].Visible:= CanPopup(ppmMain.Items[i].Tag , nil);
-        ppmMain.Items[i].Items[n].Visible:= CanPopup(ppmMain.Items[i].Items[n].Tag , nil);
+        ppmMain.Items[i].Visible:= CanPopup(ppmMain.Items[i].Tag, nil);
+        ppmMain.Items[i].Items[n].Visible:= CanPopup(ppmMain.Items[i].Items[n].Tag, nil);
       end;
   end;
 end;
@@ -702,14 +725,7 @@ begin
       end;
     except
       on E: Exception do
-      begin
-        {$IFDEF Debug}
-        AddToLog(ClassName + ' | PrepareGUI_Options | ' + E.Message);
-        MessageBox(Application.Handle, PChar(ClassName + ' | PrepareGUI_Options | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-        {$ELSE}
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-        {$ENDIF}
-      end;
+        HandleError([ClassName, 'PrepareGUI_Options', E.Message]);
     end;
     // -- Not Valid Icons
     try
@@ -871,20 +887,13 @@ begin
       ItemMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
-      //MenuItem.OnClick:= DeleteItem;
+      MenuItem.OnClick:= DeleteItem;
       MenuItem.Caption:= 'Delete';
       MenuItem.Tag:= 26;
       ItemMenu.Add(MenuItem);
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | PrepareGUI | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | PrepareGUI | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'PrepareGUI', E.Message]);
   end;
 end;
 
@@ -899,14 +908,7 @@ begin
       raise Exception.Create('Cant''t load user options!');
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | PrepareOptions | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | PrepareOptions | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'PrepareOptions', E.Message]);
   end;
 end;
 
@@ -919,25 +921,23 @@ begin
       raise Exception.Create('Error while loading project list. Please check the files/folders!');
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | PrepareProjects | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | PrepareProjects | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'PrepareProjects', E.Message]);
   end;
 end;
 
 procedure TfmMain.PrepareTreeState;
 begin
-  if not Assigned(TreeStateList) then
-    TreeStateList:= TLazyStateList.Create;
-  if not TreeStateList.LoadStateFromFile() then
-    raise Exception.Create('Error while loading tree state list. Please check the files/folders!');
-  ViewProjects(tvMain);
-  TreeStateList.AppendState(tvMain);
+  try
+    if not Assigned(TreeStateList) then
+      TreeStateList:= TLazyStateList.Create;
+    if not TreeStateList.LoadStateFromFile() then
+      raise Exception.Create('Error while loading tree state list. Please check the files/folders!');
+    ViewProjects(tvMain);
+    TreeStateList.AppendState(tvMain);
+  except
+    on E: Exception do
+      HandleError([ClassName, 'PrepareTreeState', E.Message]);
+  end;
 end;
 
 procedure TfmMain.SaveFormSize(const aWidth, aHeight: integer);
@@ -957,37 +957,42 @@ end;
 
 procedure TfmMain.tvMainClick(Sender: TObject);
 begin
-  if Assigned(tvMain.Selected) and (tvMain.Selected.Data <> nil) then
-    if TObject(tvMain.Selected.Data) is TORDESYProject then
-    begin
-      edName.Text:= TORDESYProject(tvMain.Selected.Data).Name;
-      mmoDesc.Text:= TORDESYProject(tvMain.Selected.Data).Description;
-    end
-    else if TObject(tvMain.Selected.Data) is TORDESYModule then
-    begin
-      edName.Text:= TORDESYModule(tvMain.Selected.Data).Name;
-      mmoDesc.Text:= TORDESYModule(tvMain.Selected.Data).Description;
-    end
-    else if TObject(tvMain.Selected.Data) is TOraBase then
-    begin
-      edName.Text:= TOraBase(tvMain.Selected.Data).Name;
-      mmoDesc.Text:= '';
-    end
-    else if TObject(tvMain.Selected.Data) is TOraScheme then
-    begin
-      edName.Text:= TOraScheme(tvMain.Selected.Data).Login;
-      mmoDesc.Text:= '';
-    end
-    else if TObject(tvMain.Selected.Data) is TOraItem then
-    begin
-      edName.Text:= TOraItem(tvMain.Selected.Data).Name;
-      mmoDesc.Text:= TOraItem(tvMain.Selected.Data).ItemBody;
-    end
-    else
-    begin
-      edName.Text:= '';
-      mmoDesc.Text:= '';
-    end;
+  try
+    if NodeWithObject(tvMain.Selected) then
+      if TObject(tvMain.Selected.Data) is TORDESYProject then
+      begin
+        edName.Text:= TORDESYProject(tvMain.Selected.Data).Name;
+        mmoDesc.Text:= TORDESYProject(tvMain.Selected.Data).Description;
+      end
+      else if TObject(tvMain.Selected.Data) is TORDESYModule then
+      begin
+        edName.Text:= TORDESYModule(tvMain.Selected.Data).Name;
+        mmoDesc.Text:= TORDESYModule(tvMain.Selected.Data).Description;
+      end
+      else if TObject(tvMain.Selected.Data) is TOraBase then
+      begin
+        edName.Text:= TOraBase(tvMain.Selected.Data).Name;
+        mmoDesc.Text:= '';
+      end
+      else if TObject(tvMain.Selected.Data) is TOraScheme then
+      begin
+        edName.Text:= TOraScheme(tvMain.Selected.Data).Login;
+        mmoDesc.Text:= '';
+      end
+      else if TObject(tvMain.Selected.Data) is TOraItem then
+      begin
+        edName.Text:= TOraItem(tvMain.Selected.Data).Name;
+        mmoDesc.Text:= TOraItem(tvMain.Selected.Data).ItemBody;
+      end
+      else
+      begin
+        edName.Text:= '';
+        mmoDesc.Text:= '';
+      end;
+  except
+    on E: Exception do
+      HandleError([ClassName, 'tvMainClick', E.Message]);
+  end;
 end;
 
 procedure TfmMain.tvMainExpanded(Sender: TObject; Node: TTreeNode);
@@ -1041,22 +1046,20 @@ begin
       Node.ImageIndex:= 0;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | tvMainGetImageIndex | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | tvMainGetImageIndex | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'tvMainGetImageIndex', E.Message]);
   end;
 end;
 
 procedure TfmMain.UpdateGUI;
 begin
-  TreeStateList.ReadState(tvMain);
-  ViewProjects(tvMain);
-  TreeStateList.AppendState(tvMain);
+  try
+    TreeStateList.ReadState(tvMain);
+    ViewProjects(tvMain);
+    TreeStateList.AppendState(tvMain);
+  except
+    on E: Exception do
+      HandleError([ClassName, 'UpdateGUI', E.Message]);
+  end;
 end;
 
 procedure TfmMain.UpdateStatus(Sender: TObject);
@@ -1080,14 +1083,7 @@ begin
     UpdateGUI;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | UpdateStatus | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | UpdateStatus | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'UpdateStatus', E.Message]);
   end;
 end;
 
@@ -1095,10 +1091,13 @@ procedure TfmMain.WrapItem(Sender: TObject);
 var
   iModule: TORDESYModule;
 begin
-  if Assigned(tvMain.Selected) and Assigned(tvMain.Selected.Data) and (TObject(tvMain.Selected.Data) is TORDESYModule) then
-    iModule:= TORDESYModule(tvMain.Selected.Data)
-  else if Assigned(tvMain.Selected) and Assigned(tvMain.Selected.Data) and (TObject(tvMain.Selected.Data) is TOraItem) then
-    iModule:= TORDESYModule(TOraItem(tvMain.Selected.Data).ModuleRef)
+  if NodeWithObject(tvMain.Selected) then
+  begin
+    if (TObject(tvMain.Selected.Data) is TORDESYModule) then
+      iModule:= TORDESYModule(tvMain.Selected.Data)
+    else if (TObject(tvMain.Selected.Data) is TOraItem) then
+      iModule:= TORDESYModule(TOraItem(tvMain.Selected.Data).ModuleRef)
+  end
   else
     Exit;
   if ShowWrapDialog(iModule, ProjectList) then

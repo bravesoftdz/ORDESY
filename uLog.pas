@@ -18,7 +18,7 @@ unit uLog;
 interface
 
 uses
-  SysUtils;
+  SysUtils, Windows;
 
 procedure AddToLog(s: string);
 

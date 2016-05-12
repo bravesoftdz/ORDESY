@@ -18,10 +18,7 @@ interface
 
 uses
   // ORDESY Modules
-  {$IFDEF Debug}
-  uLog,
-  {$ENDIF}
-  uORDESY,
+  uORDESY, uErrorHandle,
   // Delphi Modules
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ExtCtrls;
@@ -63,10 +60,8 @@ type
     CurrentScheme: TOraScheme;
     CurrentType: string;
     CurrentName: string;
+    CurrentValid: boolean;
   end;
-
-var
-  fmWrap: TfmWrap;
 
 function ShowWrapDialog(aModule: TORDESYModule; aProjectList: TORDESYProjectList): boolean;
 
@@ -85,45 +80,42 @@ var
 begin
   with TfmWrap.Create(Application) do
     try
-      Result:= false;
-      PrepareGUI;
-      CurrentProject:= TORDESYProject(aModule.ProjectRef);
-      for n := 0 to pnlMain.ControlCount - 1 do
-      begin
-        if (pnlMain.Controls[n] is TWrapComboBox) and (TWrapComboBox(pnlMain.Controls[n]).Name = 'cbxWrapBase') then
-          iWrapBase:= TWrapComboBox(pnlMain.Controls[n]);
-        if (pnlMain.Controls[n] is TWrapComboBox) and (TWrapComboBox(pnlMain.Controls[n]).Name = 'cbxWrapScheme') then
-          iWrapScheme:= TWrapComboBox(pnlMain.Controls[n]);
+      try
+        Result:= false;
+        PrepareGUI;
+        CurrentProject:= TORDESYProject(aModule.ProjectRef);
+        for n := 0 to pnlMain.ControlCount - 1 do
+        begin
+          if (pnlMain.Controls[n] is TWrapComboBox) and (TWrapComboBox(pnlMain.Controls[n]).Name = 'cbxWrapBase') then
+            iWrapBase:= TWrapComboBox(pnlMain.Controls[n]);
+          if (pnlMain.Controls[n] is TWrapComboBox) and (TWrapComboBox(pnlMain.Controls[n]).Name = 'cbxWrapScheme') then
+            iWrapScheme:= TWrapComboBox(pnlMain.Controls[n]);
+        end;
+        for i := 0 to aProjectList.OraBaseCount - 1 do
+          iWrapBase.Items.AddObject(aProjectList.GetOraBaseNameByIndex(i), aProjectList.GetOraBaseByIndex(i));
+        if iWrapBase.Items.Count <> 0 then
+          iWrapBase.ItemIndex:= 0;
+        for i := 0 to aProjectList.OraSchemeCount - 1 do
+          iWrapScheme.Items.AddObject(aProjectList.GetOraSchemeLoginByIndex(i), aProjectList.GetOraSchemeByIndex(i));
+        if iWrapScheme.Items.Count <> 0 then
+          iWrapScheme.ItemIndex:= 0;
+        lblProject.Caption:= 'Project: ' + CurrentProject.Name;
+        lblModule.Caption:= 'Module: ' + aModule.Name;
+        if Assigned(CurrentBase) then
+          lblBase.Caption:= 'Base: ' + CurrentBase.Name;
+        if Assigned(CurrentScheme) then
+          lblScheme.Caption:= 'Scheme: ' + CurrentScheme.Login;
+      except
+        on E: Exception do
+          HandleError([ClassName, 'ShowWrapDialog', E.Message]);
       end;
-      for i := 0 to aProjectList.OraBaseCount - 1 do
-        iWrapBase.Items.AddObject(aProjectList.GetOraBaseNameByIndex(i), aProjectList.GetOraBaseByIndex(i));
-      if iWrapBase.Items.Count <> 0 then
-        iWrapBase.ItemIndex:= 0;
-      for i := 0 to aProjectList.OraSchemeCount - 1 do
-        iWrapScheme.Items.AddObject(aProjectList.GetOraSchemeLoginByIndex(i), aProjectList.GetOraSchemeByIndex(i));
-      if iWrapScheme.Items.Count <> 0 then
-        iWrapScheme.ItemIndex:= 0;
-      lblProject.Caption:= 'Project: ' + CurrentProject.Name;
-      lblModule.Caption:= 'Module: ' + aModule.Name;
-      if Assigned(CurrentBase) then
-        lblBase.Caption:= 'Base: ' + CurrentBase.Name;
-      if Assigned(CurrentScheme) then
-        lblScheme.Caption:= 'Scheme: ' + CurrentScheme.Login;
       if ShowModal = mrOk then
       begin
         try
-          CurrentProject.WrapItem(aModule.Id, CurrentBase.Id, CurrentScheme.Id, CurrentName, TOraItem.GetItemType(CurrentType));
-          Result:= true;
+          Result:= CurrentProject.WrapItem(aModule.Id, CurrentBase.Id, CurrentScheme.Id, CurrentName, TOraItem.GetItemType(CurrentType), CurrentValid);
         except
           on E: Exception do
-          begin
-            {$IFDEF Debug}
-            AddToLog(ClassName + ' | WrapItem | ' + E.Message);
-            MessageBox(Application.Handle, PChar(ClassName + ' | WrapItem | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-            {$ELSE}
-            MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-            {$ENDIF}
-          end;
+            HandleError([ClassName, 'WrapItem', E.Message]);
         end;
       end;
     finally
@@ -146,14 +138,7 @@ begin
   end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | btnUpdateClick | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | btnUpdateClick | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'btnUpdateClick', E.Message]);
   end;
 end;
 
@@ -181,14 +166,7 @@ begin
       CurrentType:= '';
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | cbxItemTypeChange | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | cbxItemTypeChange | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'cbxItemTypeChange', E.Message]);
   end;
 end;
 
@@ -198,18 +176,11 @@ begin
     if (Sender is TWrapComboBox) and (TWrapComboBox(Sender).Items.Count > 0) and (TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex] <> nil) and (TObject(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]) is TOraScheme) then
     begin
       CurrentScheme:= TOraScheme(TWrapComboBox(Sender).Items.Objects[TWrapComboBox(Sender).ItemIndex]);
-      lblScheme.Caption:= 'Scheme: ' + CurrentScheme.Login;
+      lblScheme.Caption:= Format('Scheme: %s', [CurrentScheme.Login]);
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | cbxSchemeListSelect | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | cbxSchemeListSelect | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'cbxSchemeListSelect', E.Message]);
   end;
 end;
 
@@ -222,19 +193,18 @@ procedure TfmWrap.lbxListClick(Sender: TObject);
 begin
   try
     if (lbxList.Count > 0) and (lbxList.ItemIndex >= 0) and (lbxList.ItemIndex < lbxList.Count) then
-      CurrentName:= lbxList.Items.Strings[lbxList.ItemIndex]
+    begin
+      CurrentName:= lbxList.Items.Strings[lbxList.ItemIndex];
+      CurrentValid:= TOraItemHead(lbxList.Items.Objects[lbxList.ItemIndex]).Valid;
+    end
     else
+    begin
       CurrentName:= '';
+      CurrentValid:= false;
+    end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | lbxListClick | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | lbxListClick | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'lbxListClick', E.Message]);
   end;
 end;
 
@@ -277,14 +247,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | lbxListDrawItem | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | lbxListDrawItem | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'lbxListDrawItem', E.Message]);
   end;
 end;
 

@@ -103,6 +103,7 @@ object fmSchemeDialog: TfmSchemeDialog
       Height = 25
       Anchors = [akRight, akBottom]
       Caption = 'Save'
+      Default = True
       ModalResult = 1
       TabOrder = 3
       OnClick = btnSaveClick

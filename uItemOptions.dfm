@@ -27,7 +27,6 @@ object fmItemOptions: TfmItemOptions
     Anchors = [akLeft, akTop, akRight]
     Caption = 'Name:'
     TabOrder = 0
-    ExplicitWidth = 383
     DesignSize = (
       315
       41)
@@ -38,7 +37,6 @@ object fmItemOptions: TfmItemOptions
       Height = 21
       Anchors = [akLeft, akTop, akRight]
       TabOrder = 0
-      ExplicitWidth = 371
     end
   end
   object gbxInfo: TGroupBox
@@ -49,8 +47,6 @@ object fmItemOptions: TfmItemOptions
     Anchors = [akLeft, akTop, akRight, akBottom]
     Caption = 'Connection info:'
     TabOrder = 1
-    ExplicitWidth = 367
-    ExplicitHeight = 235
     DesignSize = (
       315
       245)
@@ -76,7 +72,6 @@ object fmItemOptions: TfmItemOptions
       Anchors = [akLeft, akTop, akBottom]
       ItemHeight = 13
       TabOrder = 0
-      ExplicitHeight = 186
     end
     object lbxScheme: TListBox
       Left = 159
@@ -86,7 +81,6 @@ object fmItemOptions: TfmItemOptions
       Anchors = [akLeft, akTop, akBottom]
       ItemHeight = 13
       TabOrder = 1
-      ExplicitHeight = 186
     end
   end
   object gbxTypeInfo: TGroupBox
@@ -97,7 +91,6 @@ object fmItemOptions: TfmItemOptions
     Anchors = [akLeft, akRight, akBottom]
     Caption = 'Type info:'
     TabOrder = 2
-    ExplicitTop = 305
     DesignSize = (
       315
       105)
@@ -156,7 +149,6 @@ object fmItemOptions: TfmItemOptions
     Align = alBottom
     BevelOuter = bvNone
     TabOrder = 3
-    ExplicitTop = 403
     object btnSave: TButton
       Left = 234
       Top = 8

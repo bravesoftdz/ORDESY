@@ -76,7 +76,6 @@ object fmMain: TfmMain
       Height = 36
       Align = alBottom
       TabOrder = 2
-      ExplicitTop = 393
       DesignSize = (
         552
         36)

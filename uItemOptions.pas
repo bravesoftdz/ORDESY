@@ -18,10 +18,7 @@ interface
 
 uses
   // ORDESY Modules
-  {$IFDEF Debug}
-  uLog,
-  {$ENDIF}
-  uORDESY,
+  uORDESY, uErrorHandle,
   // Delphi Modules
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, ExtCtrls;
@@ -51,8 +48,6 @@ type
     procedure VisualizeItemType(aType: TOraItemType);
     procedure LoadBases(aItem: TOraItem);
     procedure LoadSchemes(aItem: ToraItem);
-  public
-    { Public declarations }
   end;
 
 function ShowItemOptionsDialog(aItem: TOraItem): boolean;
@@ -113,14 +108,7 @@ begin
     lbxBase.Items.EndUpdate;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | LoadBases | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | LoadBases | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'LoadBases', E.Message]);
   end;
 end;
 
@@ -141,14 +129,7 @@ begin
     lbxScheme.Items.EndUpdate;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | LoadSchemes | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | LoadSchemes | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'LoadSchemes', E.Message]);
   end;
 end;
 

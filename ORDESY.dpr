@@ -15,7 +15,9 @@ uses
   uSchemeList in 'uSchemeList.pas' {fmSchemeList},
   uSchemeDialog in 'uSchemeDialog.pas' {fmSchemeDialog},
   uLazyTreeState in 'uLazyTreeState.pas',
-  uItemOptions in 'uItemOptions.pas' {fmItemOptions};
+  uItemOptions in 'uItemOptions.pas' {fmItemOptions},
+  uErrorHandle in 'uErrorHandle.pas',
+  uFileRWTypes in 'uFileRWTypes.pas';
 
 {$R *.res}
 

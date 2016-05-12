@@ -22,9 +22,7 @@ interface
 
 uses
   // ORDESY Modules
-  {$IFDEF Debug}
-  uLog,
-  {$ENDIF}
+  uErrorHandle, uFileRWTypes,
   // Delphi Modules
   SysUtils, Windows, Forms, ComCtrls;
 
@@ -50,11 +48,12 @@ type
     procedure GetNodeData(aNode: TTreeNode; var aPName, aCName, aExpanded: string);
     function AddState(const aPName, aCName, aExpanded: string): boolean;
     function SetNodeState(aNode: TTreeNode): boolean;
+  protected
+    function ShowContents: string;
   public
     constructor Create;
     destructor Destroy; override;
     procedure Clear;
-    function ShowContents: string;
     procedure ReadState(aList: TTreeView);
     procedure AppendState(aList: TTreeView);
     function SaveStateToFile(const aFileName: string = 'tree_state.data'): boolean;
@@ -105,14 +104,7 @@ begin
       aPName:= '';
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | GetNodeData | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | GetNodeData | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'GetNodeData', E.Message]);
   end;
 end;
 
@@ -129,14 +121,7 @@ begin
     Result:= true;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | AddState | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | AddState | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'AddState', E.Message]);
   end;
 end;
 
@@ -164,14 +149,7 @@ begin
     Result:= true;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | SetNodeState | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | SetNodeState | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'SetNodeState', E.Message]);
   end;
 end;
 
@@ -199,14 +177,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | ReadState | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | ReadState | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'ReadState', E.Message]);
   end;
 end;
 
@@ -215,29 +186,24 @@ var
   i: integer;
 begin
   try
-    aList.Items.BeginUpdate;
-    FUpdating:= true;
-    for i := 0 to aList.Items.Count - 1 do
-      SetNodeState(aList.Items[i]);
-    FUpdating:= false;
-    aList.Items.EndUpdate;
+    try
+      aList.Items.BeginUpdate;
+      FUpdating:= true;
+      for i := 0 to aList.Items.Count - 1 do
+        SetNodeState(aList.Items[i]);
+      FUpdating:= false;
+    finally
+      aList.Items.EndUpdate;
+    end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | AppendState | ' + E.Message);
-      MessageBox(Application.Handle, PChar(ClassName + ' | AppendState | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'AppendState', E.Message]);
   end;
 end;
 
 function TLazyStateList.LoadStateFromFile(const aFileName: string): boolean;
 var
-  iHandle: integer;
-  charSize, iCount, i, strSize: integer;
+  iHandle, iCount, i: integer;
   iFileHeader, iFileVersion, ParentName, CurrentName, Expanded: string;
 begin
   Result:= false;
@@ -246,58 +212,29 @@ begin
     Result := true;
     Exit;
   end;
-  try 
-    try   
+  try
+    try
       Clear;
       iHandle := FileOpen(aFileName, fmOpenRead);
       if iHandle = -1 then
         raise Exception.Create(SysErrorMessage(GetLastError));
-      charSize := SizeOf(Char);
-      SetLength(iFileHeader, length(TREESTATENAME));
-      SetLength(iFileVersion, length(TREESTATEVERSION));
-      FileRead(iHandle, iFileHeader[1], length(TREESTATENAME) * charSize);
-      // Reading header
-      FileRead(iHandle, iFileVersion[1], length(TREESTATEVERSION) * charSize);
-      // Reading version      
+      FileReadString(iHandle, iFileHeader);  // Name
+      FileReadString(iHandle, iFileVersion); // Version
       if (iFileHeader <> TREESTATENAME) or (iFileVersion <> TREESTATEVERSION) then
-        raise Exception.Create('Incorrect version! Need: ' + TREESTATENAME + ' ' + TREESTATEVERSION);
-      SetLength(iFileHeader, 0);
-      SetLength(iFileVersion, 0);
-      FileRead(iHandle, iCount, SizeOf(iCount)); // Count
-      //
+        raise Exception.Create(Format('Incorrect version! Need: %s:%s', [TREESTATENAME, TREESTATEVERSION]));
+      FileReadInteger(iHandle, iCount); // Count
       for i := 0 to iCount - 1 do
       begin
-        // ParentName
-        FileRead(iHandle, strSize, SizeOf(strSize)); // Name length
-        SetLength(ParentName, strSize);
-        FileRead(iHandle, ParentName[1], strSize * charSize); // Getting Name
-        // CurrentName
-        FileRead(iHandle, strSize, SizeOf(strSize)); // Name length
-        SetLength(CurrentName, strSize);
-        FileRead(iHandle, CurrentName[1], strSize * charSize); // Getting Name
-        // Expanded
-        FileRead(iHandle, strSize, SizeOf(strSize)); // Expanded length
-        SetLength(Expanded, strSize);
-        FileRead(iHandle, Expanded[1], strSize * charSize);
-        //
+        FileReadString(iHandle, ParentName);  // ParentName
+        FileReadString(iHandle, CurrentName); // CurrentName
+        FileReadString(iHandle, Expanded);    // Expanded
         AddState(ParentName, CurrentName, Expanded);
-        //
-        SetLength(ParentName, 0);
-        SetLength(CurrentName, 0);
-        SetLength(Expanded, 0);
       end;
       FSaved:= true;
       Result:= true;
     except
       on E: Exception do
-      begin
-        {$IFDEF Debug}
-        AddToLog(ClassName + ' | LoadStateFromFile | ' + E.Message);
-        MessageBox(Application.Handle, PChar(ClassName + ' | LoadStateFromFile | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-        {$ELSE}
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-        {$ENDIF}
-      end;
+        HandleError([ClassName, 'LoadStateFromFile', E.Message]);
     end;
   finally
     FileClose(iHandle);
@@ -306,52 +243,32 @@ end;
 
 function TLazyStateList.SaveStateToFile(const aFileName: string): boolean;
 var
-  iHandle: integer;
-  charSize, iCount, i, strSize: integer;
+  iHandle, iCount, i: integer;
 begin
   Result:= false;
   try
     try
       iHandle := FileCreate(aFileName);
-      charSize := SizeOf(Char);
-      FileWrite(iHandle, TREESTATENAME[1], length(TREESTATENAME) * charSize);
-      FileWrite(iHandle, TREESTATEVERSION[1], length(TREESTATEVERSION) * charSize);
-      // Count
+      FileWriteString(iHandle, TREESTATENAME);    // Name
+      FileWriteString(iHandle, TREESTATEVERSION); // Version
       iCount:= FCount;
       FileWrite(iHandle, iCount, SizeOf(iCount));
       for i := 0 to iCount - 1 do
       begin
-        strSize := length(FLazyList[i].ParentName);
-        FileWrite(iHandle, strSize, SizeOf(strSize)); // ParentName length
-        FileWrite(iHandle, FLazyList[i].ParentName[1], strSize * charSize); // ParentName
-        //
-        strSize := length(FLazyList[i].CurrentName);
-        FileWrite(iHandle, strSize, SizeOf(strSize)); // CurrentName length
-        FileWrite(iHandle, FLazyList[i].CurrentName[1], strSize * charSize); // CurrentName
-        //
-        strSize := length(FLazyList[i].Expanded);
-        FileWrite(iHandle, strSize, SizeOf(strSize)); // Expanded length
-        FileWrite(iHandle, FLazyList[i].Expanded[1], strSize * charSize); // Expanded
+        FileWriteString(iHandle, FLazyList[i].ParentName);  // ParentName
+        FileWriteString(iHandle, FLazyList[i].CurrentName); // CurrentName
+        FileWriteString(iHandle, FLazyList[i].Expanded);    // Expanded
       end;
       FSaved:= true;
       Result:= true;    
     except
       on E: Exception do
-      begin
-        {$IFDEF Debug}
-        AddToLog(ClassName + ' | SaveStateToFile | ' + E.Message);
-        MessageBox(Application.Handle, PChar(ClassName + ' | SaveStateToFile | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
-        {$ELSE}
-        MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
-        {$ENDIF}
-      end;
+        HandleError([ClassName, 'SaveStateToFile', E.Message]);
     end;
   finally
     FileClose(iHandle);
   end;
 end;
-
-
 
 { TLazyTreeState }
 

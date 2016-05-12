@@ -26,11 +26,8 @@ unit uORDESY;
 interface
 
 uses
-  // ORDESY Modules
-  {$IFDEF Debug}
-  uLog,
-  {$ENDIF}
-  uExplode, uConnection, uShellFuncs, uHash,
+  // ORDESY Modules  
+  uExplode, uConnection, uShellFuncs, uHash, uErrorHandle, uFileRWTypes,
   // Delphi Modules
   Generics.Collections, SysUtils, Forms, Windows, Classes, Controls;
 
@@ -81,6 +78,7 @@ type
     class function GetItemSqlType(const aType: TOraItemType): string;
     class function GetItemType(const aType: string): TOraItemType;
     procedure UpdateStatus;
+    function Actual: boolean;
     { function Wrap(var aProject: TORDESYProject):boolean;
       function Deploy(var aProject: TORDESYProject): boolean;
       function SaveToProject(var aProject: TORDESYProject): boolean; }
@@ -162,6 +160,7 @@ type
     function GetOraItemById(const aId: integer): TOraItem;
     function GetOraItemByIndex(const aIndex: integer): TOraItem;
     function GetOraItemNameById(const aId: integer): string;
+    function RemoveOraItemById(const aId: integer): boolean;
     //
     property Id: integer read FId;
     property Name: string read FName write SetName;
@@ -199,8 +198,8 @@ type
     function GetModuleNameByIndex(const aIndex: integer): string;
     function RemoveModuleById(const aId: integer): boolean;
     // WRAP DEPLOY!
-    procedure WrapItem(const aModuleId, aBaseId, aSchemeId: integer;
-      const aName: string; const aType: TOraItemType);
+    function WrapItem(const aModuleId, aBaseId, aSchemeId: integer;
+      const aName: string; const aType: TOraItemType; const aValid: boolean): boolean;
     procedure DeployItem(const aItemId: integer);
 
     property Id: integer read FId;
@@ -232,20 +231,7 @@ type
     function GetProjectsCount: integer;
     function GetOraBaseCount: integer;
     function GetOraSchemeCount: integer;
-    procedure OnProjectListChange(Sender: TObject);
-    // File procedures
-    // write
-    procedure FileWriteString(const aHandle: integer; const aString: string);
-    procedure FileWriteInteger(const aHandle: integer; const aInteger: integer);
-    procedure FileWriteDateTime(const aHandle: integer; const aDateTime: TDateTime);
-    procedure FileWriteBoolean(const aHandle: integer; const aBoolean: boolean);
-    procedure FileWriteItemType(const aHandle: integer; const aItemType: TOraItemType);
-    // read
-    procedure FileReadString(const aHandle: integer; var aString: string);
-    procedure FileReadInteger(const aHandle: integer; var aInteger: integer);
-    procedure FileReadDateTime(const aHandle: integer; var aDateTime: TDateTime);
-    procedure FileReadBoolean(const aHandle: integer; var aBoolean: boolean);
-    procedure FileReadItemType(const aHandle: integer; var aItemType: TOraItemType);
+    procedure OnProjectListChange(Sender: TObject);    
   public
     constructor Create;
     destructor Destroy; override;
@@ -255,7 +241,7 @@ type
     function RemoveProjectById(const aId: integer): boolean;
     function RemoveProjectByIndex(const aIndex: integer): boolean;
     // Base
-    procedure AddOraBase(aBase: TOraBase);
+    function AddOraBase(aBase: TOraBase): boolean;
     function GetOraBaseById(const aId: integer): TOraBase;
     function GetOraBaseByIndex(const aIndex: integer): TOraBase;
     function GetOraBaseNameById(const aId: integer): string;
@@ -295,6 +281,61 @@ implementation
 
 { TDBItem }
 
+function TOraItem.Actual: boolean;
+var
+  iBody: WideString;
+  iHash: LongWord;
+  firstItem: boolean;
+  iProjectList: TORDESYProjectList;
+  iBase: TOraBase;
+  iScheme: TOraScheme;
+begin
+  result:= false;
+  try
+    Screen.Cursor:= crSQLWait;
+    try
+      iProjectList:= TORDESYProjectList(TORDESYModule(ModuleRef).ProjectRef);
+      if not Assigned(iProjectList) then
+        raise Exception.Create('Error with getting ORDESY ProjectList object.');
+      iBase:= iProjectList.GetOraBaseById(BaseId);
+      if not Assigned(iBase) then
+        raise Exception.Create(Format('Error with getting OraBase object. BaseId = %u', [BaseId]));
+      iScheme:= iProjectList.GetOraSchemeById(SchemeId);
+      if not Assigned(iScheme) then
+        raise Exception.Create(Format('Error with getting OraScheme object. SchemeId = %u', [SchemeId]));
+      // connecting...
+      if not iScheme.Connected then
+        iScheme.Connect(iBase.Id);
+      // retrieve
+      with iScheme.Connection do
+      begin
+        Query.Active := false;
+        Query.SQL.Text :=
+          Format('select text from sys.all_source where owner = ''%s'' and name = ''%s'' and type = ''%s'' order by line asc', [iScheme.Login, FName, TOraItem.GetItemSqlType(ItemType)]);
+        Query.Active := true;
+        firstItem := true;
+        while not Query.Eof do
+        begin
+          if firstItem then
+            iBody := iBody + 'CREATE OR REPLACE ' + Query.Fields[0].AsString
+          else
+            iBody := iBody + Query.Fields[0].AsString;
+          firstItem := false;
+          Query.Next;
+        end;
+        iHash:= MurmurHash2(iBody);
+        if iHash = Hash then
+          Result:= true;
+      end;
+    finally
+      Screen.Cursor:= crDefault;
+    end;
+  except
+    on E: Exception do
+      HandleError([ClassName, 'Actual', E.Message]);      
+  end;
+end;
+
 constructor TOraItem.Create(aModuleRef: Pointer; const aId, aBaseId,
   aSchemeId: integer; const aName: string; const aBody: WideString = '';
   const aType: TOraItemType = OraProcedure; const aValid: boolean = false);
@@ -306,7 +347,7 @@ begin
   FName := aName;
   FBody := aBody;
   // FHash:= GetSimpleHash(PChar(FBody));
-  FHash := MurmurHash2(PAnsiChar(FBody));
+  FHash := MurmurHash2(FBody);
   FSchemeId := aSchemeId;
   FBaseId := aBaseId;
   FModuleRef := aModuleRef;
@@ -324,16 +365,23 @@ begin
     OnChange(Self);
 end;
 
-procedure TORDESYProjectList.AddOraBase(aBase: TOraBase);
+function TORDESYProjectList.AddOraBase(aBase: TOraBase): boolean;
 begin
-  if GetOraBaseById(aBase.Id) <> nil then
-    Exit;
-  SetLength(FOraBases, length(FOraBases) + 1);
-  FOraBases[ high(FOraBases)] := aBase;
-  if Assigned(FOnBaseAdd) then
-    OnBaseAdd(Self);
-  if Assigned(FOnChange) then
-    OnChange(Self);
+  Result:= false;
+  try
+    if GetOraBaseById(aBase.Id) <> nil then
+      Exit;
+    SetLength(FOraBases, length(FOraBases) + 1);
+    FOraBases[ high(FOraBases)] := aBase;
+    if Assigned(FOnBaseAdd) then
+      OnBaseAdd(Self);
+    if Assigned(FOnChange) then
+      OnChange(Self);
+    Result:= true;
+  except
+    on E: Exception do
+      HandleError([ClassName, 'RemoveModuleById', E.Message]);
+  end;
 end;
 
 procedure TORDESYModule.AddOraItem(aItem: TOraItem);
@@ -535,17 +583,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-{$IFDEF Debug}
-      AddToLog(ClassName + ' | RemoveModuleById | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | RemoveModuleById | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-{$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-{$ENDIF}
-    end;
+      HandleError([ClassName, 'RemoveModuleById', E.Message]);
   end;
 end;
 
@@ -570,8 +608,7 @@ begin
   if (aIndex >= 0) and (aIndex <= high(FOraBases)) then
     Result := FOraBases[aIndex]
   else
-    raise Exception.Create('Incorrect base index. Max value is: ' + IntToStr
-        ( high(FOraBases)));
+    raise Exception.Create(Format('Incorrect base index. Max value is: %u', [high(FOraBases)]));
 end;
 
 function TORDESYProjectList.GetOraBaseCount: integer;
@@ -599,8 +636,7 @@ begin
   if (aIndex >= 0) and (aIndex <= high(FOraBases)) then
     Result := FOraBases[aIndex].Name
   else
-    raise Exception.Create('Incorrect base index. Max value is: ' + IntToStr
-        ( high(FOraBases)));
+    raise Exception.Create(Format('Incorrect base index. Max value is: %u', [high(FOraBases)]));
 end;
 
 function TORDESYModule.GetOraItemById(const aId: integer): TOraItem;
@@ -624,8 +660,7 @@ begin
   if (aIndex >= 0) and (aIndex <= high(FOraItems)) then
     Result := FOraItems[aIndex]
   else
-    raise Exception.Create('Incorrect item index. Max value is: ' + IntToStr
-        ( high(FOraItems)));
+    raise Exception.Create(Format('Incorrect item index. Max value is: %u', [high(FOraItems)]));
 end;
 
 function TORDESYModule.GetOraItemCount: integer;
@@ -644,6 +679,31 @@ begin
       Result := FOraItems[i].Name;
       Exit;
     end;
+end;
+
+function TORDESYModule.RemoveOraItemById(const aId: integer): boolean;
+var
+  i: integer;
+begin
+  Result := false;
+  try
+    for i := 0 to high(FOraItems) do
+    begin
+      if FOraItems[i].Id = aId then
+      begin
+        FOraItems[i].Free;
+        FOraItems[i] := FOraItems[High(FOraItems)];
+        SetLength(FOraItems, length(FOraItems) - 1);
+        if Assigned(FOnChange) then
+          OnChange(Self);
+        Result:= true;
+        Exit;
+      end;
+    end;
+  except
+    on E: Exception do
+      HandleError([ClassName, 'RemoveOraItemById', E.Message]);    
+  end;
 end;
 
 function TORDESYProjectList.GetOraSchemeById(const aId: integer): TOraScheme;
@@ -668,8 +728,7 @@ begin
   if (aIndex >= 0) and (aIndex <= high(FOraSchemes)) then
     Result := FOraSchemes[aIndex]
   else
-    raise Exception.Create('Incorrect scheme index. Max value is: ' + IntToStr
-        ( high(FOraSchemes)));
+    raise Exception.Create(Format('Incorrect scheme index. Max value is: $u', [high(FOraSchemes)]));
 end;
 
 function TORDESYProjectList.GetOraSchemeCount: integer;
@@ -697,8 +756,7 @@ begin
   if (aIndex >= 0) and (aIndex <= high(FOraSchemes)) then
     Result := FOraSchemes[aIndex].Login
   else
-    raise Exception.Create('Incorrect scheme index. Max value is: ' + IntToStr
-        ( high(FOraSchemes)));
+    raise Exception.Create(Format('Incorrect scheme index. Max value is: $u', [high(FOraSchemes)]));
 end;
 
 procedure TORDESYProject.SetCreator(const Value: string);
@@ -722,8 +780,8 @@ begin
     OnChange(Self);
 end;
 
-procedure TORDESYProject.WrapItem(const aModuleId, aBaseId, aSchemeId: integer;
-  const aName: string; const aType: TOraItemType);
+function TORDESYProject.WrapItem(const aModuleId, aBaseId, aSchemeId: integer;
+  const aName: string; const aType: TOraItemType; const aValid: boolean): boolean;
 var
   iModule: TORDESYModule;
   iBase: TOraBase;
@@ -732,6 +790,7 @@ var
   firstItem: boolean;
   ItemBody: WideString;
 begin
+  Result:= false;
   try
     if not Assigned(TORDESYProjectList(ProjectListRef)) then
       Exit;
@@ -747,9 +806,7 @@ begin
     begin
       Query.Active := false;
       Query.SQL.Text :=
-        'select text from sys.all_source where ' + 'owner = ''' +
-        iScheme.Login + '''' + ' and name = ''' + aName + '''' + ' and type = ''' +
-        TOraItem.GetItemSqlType(aType) + ''' ' + 'order by line';
+        Format('select text from sys.all_source where owner = ''%s'' and name = ''%s'' and type = ''%s'' order by line asc', [iScheme.Login, aName, TOraItem.GetItemSqlType(aType)]);
       Query.Active := true;
       firstItem := true;
       while not Query.Eof do
@@ -763,24 +820,15 @@ begin
         Query.Next;
       end;
       iItem := TOraItem.Create(iModule, iModule.GetFreeItemId, aBaseId,
-        aSchemeId, aName, AdjustLineBreaks(ItemBody), aType);
+        aSchemeId, aName, AdjustLineBreaks(ItemBody), aType, aValid);
       iModule.AddOraItem(iItem);
       if Assigned(FOnChange) then
         OnChange(Self);
+      Result:= true;
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | WrapItem | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | WrapItem | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'WrapItem', E.Message]);    
   end;
 end;
 
@@ -815,18 +863,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      FConnected := false;
-{$IFDEF Debug}
-      AddToLog(ClassName + ' | Connect | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | Connect | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-{$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-{$ENDIF}
-    end;
+      HandleError([ClassName, 'Connect', E.Message]);
   end;
 end;
 
@@ -880,10 +917,10 @@ begin
         aList.Clear;
         Active := false;
         SQL.Text :=
-          'select object_name, status from sys.all_objects where owner = user and subobject_name is null and object_name not like ''BIN$%'' and object_type = ''' + TOraItem.GetItemSqlType(aItemType) + '''';
+          Format('select object_name, status from sys.all_objects where owner = user and subobject_name is null and object_name not like ''%s'' and object_type = ''%s''', ['BIN$%', TOraItem.GetItemSqlType(aItemType)]);
         Active := true;
         if RecordCount = 0 then
-          raise Exception.Create('Error while getting items list.');
+          raise Exception.Create('Error while getting items list. No data returned!');
         while not Eof do
         begin
           SetLength(FItemList, length(FItemList) + 1);
@@ -905,17 +942,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-{$IFDEF Debug}
-      AddToLog(ClassName + ' | GetItemList | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | GetItemList | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-{$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-{$ENDIF}
-    end;
+      HandleError([ClassName, 'GetItemList', E.Message]);
   end;
 end;
 
@@ -975,8 +1002,7 @@ end;
 procedure TOraItem.SetBody(const Value: WideString);
 begin
   FBody := Value;
-  // FHash:= GetSimpleHash(PChar(FBody));
-  FHash := MurmurHash2(PAnsiChar(FBody));
+  FHash := MurmurHash2(FBody);
   if Assigned(FOnChange) then
     OnChange(Self);
 end;
@@ -1021,15 +1047,14 @@ begin
         .GetOraSchemeById(SchemeId);
       if not Assigned(iScheme) then
         raise Exception.Create(
-          'Error while connecting throw item scheme. SchemeId = ' + IntToStr
-            (SchemeId));
+          Format('Error while connecting throw item scheme. SchemeId = %u', [SchemeId]));
       if not iScheme.Connected then
         iScheme.Connect(BaseId);
       with iScheme.Connection.Query do
       begin
         Active := false;
         SQL.Text :=
-          'select created, last_ddl_time, status from sys.all_objects where owner = user and object_name not like ''BIN$%'' and subobject_name is null and object_type = ''' + TOraItem.GetItemSqlType(ItemType) + '''' + ' and object_name = ''' + FName + '''';
+          Format('select created, last_ddl_time, status from sys.all_objects where owner = user and object_name not like ''%s'' and subobject_name is null and object_type = ''%s'' and object_name = ''%s''', ['BIN$%', TOraItem.GetItemSqlType(ItemType), FName]);
         Active := true;
         if RecordCount = 0 then
           raise Exception.Create(
@@ -1038,29 +1063,31 @@ begin
         begin
           First;
           if Fields[2].AsString = 'VALID' then
-            FValid := true
+          begin
+            if FValid <> true then
+            begin
+              FValid := true;
+              if Assigned(FOnChange) then
+                OnChange(Self);
+            end;
+          end
           else
-            FValid := false;
+          begin
+            if FValid <> false then
+            begin            
+              FValid := false;
+              if Assigned(FOnChange) then
+                OnChange(Self);
+            end;
+          end;
         end;
-      end;
-      if Assigned(FOnChange) then
-        OnChange(Self);
+      end;      
     finally
       Screen.Cursor := crDefault;
     end;
   except
     on E: Exception do
-    begin
-{$IFDEF Debug}
-      AddToLog(ClassName + ' | UpdateStatus | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | UpdateStatus | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-{$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-{$ENDIF}
-    end;
+      HandleError([ClassName, 'UpdateStatus', E.Message]);
   end;
 end;
 
@@ -1207,72 +1234,6 @@ begin
   inherited;
 end;
 
-procedure TORDESYProjectList.FileReadBoolean(const aHandle: integer;
-  var aBoolean: boolean);
-begin
-  FileRead(aHandle, aBoolean, sizeof(aBoolean));
-end;
-
-procedure TORDESYProjectList.FileReadDateTime(const aHandle: integer;
-  var aDateTime: TDateTime);
-begin
-  FileRead(aHandle, aDateTime, sizeof(aDateTime));
-end;
-
-procedure TORDESYProjectList.FileReadInteger(const aHandle: integer;
-  var aInteger: integer);
-begin
-  FileRead(aHandle, aInteger, sizeof(aInteger));
-end;
-
-procedure TORDESYProjectList.FileReadItemType(const aHandle: integer;
-  var aItemType: TOraItemType);
-begin
-  FileRead(aHandle, aItemType, sizeof(aItemType));
-end;
-
-procedure TORDESYProjectList.FileReadString(const aHandle: integer; var aString: string);
-var
-  strSize: integer;
-begin
-  FileRead(aHandle, strSize, sizeof(strSize));
-  SetLength(aString, strSize);
-  FileRead(aHandle, aString[1], strSize * sizeof(char));
-end;
-
-procedure TORDESYProjectList.FileWriteBoolean(const aHandle: integer;
-  const aBoolean: boolean);
-begin
-  FileWrite(aHandle, aBoolean, sizeof(aBoolean));
-end;
-
-procedure TORDESYProjectList.FileWriteDateTime(const aHandle: integer;
-  const aDateTime: TDateTime);
-begin
-  FileWrite(aHandle, aDateTime, sizeof(aDateTime));
-end;
-
-procedure TORDESYProjectList.FileWriteInteger(const aHandle, aInteger: integer);
-begin
-  FileWrite(aHandle, aInteger, sizeof(aInteger));
-end;
-
-procedure TORDESYProjectList.FileWriteItemType(const aHandle: integer;
-  const aItemType: TOraItemType);
-begin
-  FileWrite(aHandle, aItemType, sizeof(aItemType));
-end;
-
-procedure TORDESYProjectList.FileWriteString(const aHandle: integer;
-  const aString: string);
-var
-  strSize: integer;
-begin
-  strSize:= length(aString);
-  FileWrite(aHandle, strSize, sizeof(strSize));
-  FileWrite(aHandle, aString[1], strSize * sizeof(char));
-end;
-
 function TORDESYProjectList.GetFreeProjectId: integer;
 var
   i, NewId: integer;
@@ -1325,12 +1286,11 @@ end;
 function TORDESYProjectList.LoadFromFile(const aFileName: string): boolean;
 var
   iHandle: integer;
-  iP, iM, iB, iSc, Ii, iId, ModuleId, BaseId, SchemeId, charSize, strSize,
-    NameSize, DescSize, CreatorSize, BodySize, LoginSize, PassSize,
-    iProjectCount, iModuleCount, iBaseCount, iSchemeCount, iItemCount: integer;
-  iItemType: TOraItemType;
-  iFileHeader, iFileVersion, iName, iDescription, iCreator, iLogin, iPass,
-    iBody: String;
+  iP, iM, iB, iSc, Ii, iId, ModuleId, BaseId, SchemeId,
+    iProjectCount, iModuleCount, iBaseCount, iSchemeCount, iItemCount: integer;  
+  iFileHeader, iFileVersion,
+    iName, iDescription, iCreator, iLogin, iPass, iBody: String;
+  iIntItemType: integer;
   iDateCreate: TDateTime;
   IItemValid: boolean;
   iProject: TORDESYProject;
@@ -1351,7 +1311,6 @@ begin
       iHandle := FileOpen(aFileName, fmOpenRead);
       if iHandle = -1 then
         raise Exception.Create(SysErrorMessage(GetLastError));
-      charSize := SizeOf(Char);
       FileReadString(iHandle, iFileHeader);
       FileReadString(iHandle, iFileVersion);
       if (iFileHeader <> ORDESYNAME) or (iFileVersion <> ORDESYVERSION) then
@@ -1383,19 +1342,18 @@ begin
           iProject.AddModule(iModule);
           // --- ITEMS
           FileReadInteger(iHandle, iItemCount); // ITEM COUNT
-          // MessageBox(Application.Handle, PChar('item loaded count = ' + inttostr(iItemCount)), PChar('warning'), 0);
           for Ii := 0 to iItemCount - 1 do
           begin
-            FileReadInteger(iHandle, iId);        // Id
-            FileReadInteger(iHandle, BaseId);     // BaseId
-            FileReadInteger(iHandle, SchemeId);   // ShemeId
-            FileReadString(iHandle, iName);       // Name
-            FileReadItemType(iHandle, iItemType); // Type
-            FileReadBoolean(iHandle, IItemValid); // Valid
-            FileReadString(iHandle, iBody);       // Body
+            FileReadInteger(iHandle, iId);          // Id
+            FileReadInteger(iHandle, BaseId);       // BaseId
+            FileReadInteger(iHandle, SchemeId);     // ShemeId
+            FileReadString(iHandle, iName);         // Name
+            FileReadInteger(iHandle, iIntItemType); // Type
+            FileReadBoolean(iHandle, IItemValid);   // Valid
+            FileReadString(iHandle, iBody);         // Body
             // Adding
             iItem:= TOraItem.Create(iModule, iId, BaseId, SchemeId,
-                iName, iBody, iItemType, IItemValid);
+                iName, iBody, TOraItemType(iIntItemType), IItemValid);
             iItem.OnChange:= OnChange;
             iModule.AddOraItem(iItem);
           end;
@@ -1432,17 +1390,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | LoadFromFile | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | LoadFromFile | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'LoadFromFile', E.Message]);
   end;
 end;
 
@@ -1475,17 +1423,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | RemoveBaseById | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | RemoveBaseById | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'RemoveBaseById', E.Message]);
   end;
 end;
 
@@ -1507,17 +1445,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | RemoveBaseByIndex | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | RemoveBaseByIndex | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'RemoveBaseByIndex', E.Message]);
   end;
 end;
 
@@ -1545,17 +1473,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | RemoveProjectById | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | RemoveProjectById | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'RemoveProjectById', E.Message]);
   end;
 end;
 
@@ -1578,17 +1496,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | RemoveProjectByIndex | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | RemoveProjectByIndex | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'RemoveProjectByIndex', E.Message]);
   end;
 end;
 
@@ -1614,17 +1522,7 @@ begin
       end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | RemoveSchemeById | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | RemoveSchemeById | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'RemoveSchemeById', E.Message]);
   end;
 end;
 
@@ -1646,17 +1544,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | RemoveSchemeByIndex | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | RemoveSchemeByIndex | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'RemoveSchemeByIndex', E.Message]);
   end;
 end;
 
@@ -1709,7 +1597,7 @@ begin
             FileWriteInteger(iHandle, iItem.BaseId);    // BaseId
             FileWriteInteger(iHandle, iItem.SchemeId);  // SchemeId
             FileWriteString(iHandle, iItem.Name);       // Name
-            FileWriteItemType(iHandle, iItem.ItemType); // Type
+            FileWriteInteger(iHandle, integer(iItem.ItemType)); // Type
             FileWriteBoolean(iHandle, iItem.Valid);     // Valid
             FileWriteString(iHandle, iItem.ItemBody);   // Body
           end;
@@ -1741,17 +1629,7 @@ begin
     end;
   except
     on E: Exception do
-    begin
-      {$IFDEF Debug}
-      AddToLog(ClassName + ' | SaveToFile | ' + E.Message);
-      MessageBox(Application.Handle, PChar
-          (ClassName + ' | SaveToFile | ' + E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ELSE}
-      MessageBox(Application.Handle, PChar(E.Message), PChar
-          (Application.Title + ' - Error'), 48);
-      {$ENDIF}
-    end;
+      HandleError([ClassName, 'SaveToFile', E.Message]);
   end;
 end;
 
