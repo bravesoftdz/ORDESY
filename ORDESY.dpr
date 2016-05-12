@@ -14,7 +14,8 @@ uses
   uBaseList in 'uBaseList.pas' {fmBaseList},
   uSchemeList in 'uSchemeList.pas' {fmSchemeList},
   uSchemeDialog in 'uSchemeDialog.pas' {fmSchemeDialog},
-  uLazyTreeState in 'uLazyTreeState.pas';
+  uLazyTreeState in 'uLazyTreeState.pas',
+  uItemOptions in 'uItemOptions.pas' {fmItemOptions};
 
 {$R *.res}
 
@@ -26,5 +27,6 @@ begin
   Application.MainFormOnTaskbar := True;
   Application.Title := 'OrDeSy';
   Application.CreateForm(TfmMain, fmMain);
+  Application.CreateForm(TfmItemOptions, fmItemOptions);
   Application.Run;
 end.

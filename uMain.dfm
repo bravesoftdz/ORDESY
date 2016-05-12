@@ -196,31 +196,32 @@ object fmMain: TfmMain
     object miProject: TMenuItem
       Caption = 'Project'
       object miAddProject: TMenuItem
-        Caption = 'Add project'
+        Caption = 'Add'
         OnClick = AddProject
       end
       object miEditProject: TMenuItem
-        Caption = 'Edit project'
+        Caption = 'Edit'
         OnClick = EditProject
       end
       object miModule: TMenuItem
         Caption = 'Module'
         object AddModule1: TMenuItem
-          Caption = 'Add Module'
+          Caption = 'Add'
           OnClick = AddModule
         end
-        object miModuleList: TMenuItem
-          Caption = 'Module List'
+        object miEditModule: TMenuItem
+          Caption = 'Edit'
+          OnClick = EditModule
         end
       end
       object miItem: TMenuItem
         Caption = 'Item'
         object miWrapItem: TMenuItem
-          Caption = 'Wrap item'
+          Caption = 'Wrap'
           OnClick = WrapItem
         end
         object miDeployItem: TMenuItem
-          Caption = 'Deploy Item'
+          Caption = 'Deploy'
         end
         object miItemList: TMenuItem
           Caption = 'Item list'
@@ -237,22 +238,22 @@ object fmMain: TfmMain
     object miBase: TMenuItem
       Caption = 'Base'
       object miAddBase: TMenuItem
-        Caption = 'Add base'
+        Caption = 'Add'
         OnClick = AddBase
       end
       object miBaseList: TMenuItem
-        Caption = 'Base list'
+        Caption = 'List'
         OnClick = miBaseListClick
       end
     end
     object miScheme: TMenuItem
       Caption = 'Scheme'
       object miAddScheme: TMenuItem
-        Caption = 'Add scheme'
+        Caption = 'Add'
         OnClick = miAddSchemeClick
       end
       object miSchemeList: TMenuItem
-        Caption = 'Scheme list'
+        Caption = 'List'
         OnClick = miSchemeListClick
       end
     end

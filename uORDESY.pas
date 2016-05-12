@@ -4,9 +4,9 @@ interface
 
 uses
   // ORDESY Modules
-{$IFDEF Debug}
+  {$IFDEF Debug}
   uLog,
-{$ENDIF}
+  {$ENDIF}
   uExplode, uConnection, uShellFuncs, uHash,
   // Delphi Modules
   Generics.Collections, SysUtils, Forms, Windows, Classes, Controls;
@@ -951,7 +951,7 @@ begin
     try
       Screen.Cursor := crSQLWait;
       iScheme := TORDESYProjectList
-        (TORDESYProject(TORDESYModule(ModuleRef).ProjectRef).FProjectListRef)
+        (TORDESYProject(TORDESYModule(ModuleRef).ProjectRef).ProjectListRef)
         .GetOraSchemeById(SchemeId);
       if not Assigned(iScheme) then
         raise Exception.Create(
@@ -963,7 +963,7 @@ begin
       begin
         Active := false;
         SQL.Text :=
-          'select created, last_ddl_time, status from sys.all_objects where owner = user and object_name not like ''BIN$%'' and subobjectname is null and object_type = ''' + TOraItem.GetItemSqlType(ItemType) + '''' + ' and objectname = ''' + Name + '''';
+          'select created, last_ddl_time, status from sys.all_objects where owner = user and object_name not like ''BIN$%'' and subobject_name is null and object_type = ''' + TOraItem.GetItemSqlType(ItemType) + '''' + ' and object_name = ''' + FName + '''';
         Active := true;
         if RecordCount = 0 then
           raise Exception.Create(
@@ -971,7 +971,7 @@ begin
         else
         begin
           First;
-          if Fields[2].ToString = 'VALID' then
+          if Fields[2].AsString = 'VALID' then
             FValid := true
           else
             FValid := false;
