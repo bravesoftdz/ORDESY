@@ -468,6 +468,8 @@ procedure TfmMain.AddModule(Sender: TObject);
 var
   iProject: TORDESYProject;
 begin
+  if not Assigned(tvMain.Selected) or not Assigned(tvMain.Selected.Data) then
+    Exit;
   if TObject(tvMain.Selected.Data) is TORDESYProject then
     iProject:= TORDESYProject(tvMain.Selected.Data)
   else if TObject(tvMain.Selected.Data) is TORDESYModule then
