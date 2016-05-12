@@ -86,7 +86,7 @@ begin
       if iWrapBase.Items.Count <> 0 then
         iWrapBase.ItemIndex:= 0;
       for i := 0 to aProjectList.OraSchemeCount - 1 do
-        iWrapScheme.Items.AddObject(aProjectList.GetOraSchemeLogin(i), aProjectList.GetOraSchemeByIndex(i));
+        iWrapScheme.Items.AddObject(aProjectList.GetOraSchemeLoginByIndex(i), aProjectList.GetOraSchemeByIndex(i));
       if iWrapScheme.Items.Count <> 0 then
         iWrapScheme.ItemIndex:= 0;
       lblProject.Caption:= 'Project: ' + CurrentProject.Name;

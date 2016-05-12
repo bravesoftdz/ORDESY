@@ -39,7 +39,7 @@ type
     FId: integer;
     FSchemeId: integer;
     FBaseId: integer;
-    FHash: integer;
+    FHash: LongWord;
     FType: TOraItemType;
     FValid: boolean;
     FName: string;
@@ -68,7 +68,7 @@ type
     property ItemBody: WideString read FBody write SetBody;
     property SchemeId: integer read FSchemeId write SetSchemeId;
     property BaseId: integer read FBaseId write SetBaseId;
-    property Hash: integer read FHash;
+    property Hash: LongWord read FHash;
     property OnChange: TNotifyEvent read FOnChange write FOnChange;
     property ModuleRef: Pointer read FModuleRef;
   end;
@@ -138,7 +138,7 @@ type
     procedure AddOraItem(aItem: TOraItem);
     function GetOraItemById(const aId: integer): TOraItem;
     function GetOraItemByIndex(const aIndex: integer): TOraItem;
-    function GetOraItemName(const aIndex: integer): string;
+    function GetOraItemNameById(const aId: integer): string;
     //
     property Id: integer read FId;
     property Name: string read FName write SetName;
@@ -172,7 +172,8 @@ type
     procedure AddModule(aModule: TORDESYModule);
     function GetModuleById(const aId: integer): TORDESYModule;
     function GetModuleByIndex(const aIndex: integer): TORDESYModule;
-    function GetModuleName(const aIndex: integer): string;
+    function GetModuleNameById(const aId: integer): string;
+    function GetModuleNameByIndex(const aIndex: integer): string;
     function RemoveModuleById(const aId: integer): boolean;
     // WRAP DEPLOY!
     procedure WrapItem(const aModuleId, aBaseId, aSchemeId: integer;
@@ -229,7 +230,8 @@ type
     procedure AddOraScheme(aScheme: TOraScheme);
     function GetOraSchemeById(const aId: integer): TOraScheme;
     function GetOraSchemeByIndex(const aIndex: integer): TOraScheme;
-    function GetOraSchemeLogin(const aIndex: integer): string;
+    function GetOraSchemeLoginById(const aId: integer): string;
+    function GetOraSchemeLoginByIndex(const aIndex: integer): string;
     function RemoveSchemeById(const aId: integer): Boolean;
     function RemoveSchemeByIndex(const aIndex: integer): boolean;
     //
@@ -277,14 +279,9 @@ end;
 { TORDESYProject }
 
 procedure TORDESYProject.AddModule(aModule: TORDESYModule);
-var
-  i: integer;
 begin
-  for i := 0 to high(FORDESYModules) do
-  begin
-    if FORDESYModules[i].Id = aModule.Id then
-      Exit;
-  end;
+  if GetModuleById(aModule.Id) <> nil then
+    Exit;
   SetLength(FORDESYModules, length(FORDESYModules) + 1);
   FORDESYModules[ high(FORDESYModules)] := aModule;
   if Assigned(FOnChange) then
@@ -292,14 +289,9 @@ begin
 end;
 
 procedure TORDESYProjectList.AddOraBase(aBase: TOraBase);
-var
-  i: integer;
 begin
-  for i := 0 to high(FOraBases) do
-  begin
-    if FOraBases[i].Id = aBase.Id then
-      Exit;
-  end;
+  if GetOraBaseById(aBase.Id) <> nil then
+    Exit;
   SetLength(FOraBases, length(FOraBases) + 1);
   FOraBases[ high(FOraBases)] := aBase;
   if Assigned(FOnBaseAdd) then
@@ -309,14 +301,9 @@ begin
 end;
 
 procedure TORDESYModule.AddOraItem(aItem: TOraItem);
-var
-  i: integer;
 begin
-  for i := 0 to high(FOraItems) do
-  begin
-    if FOraItems[i].Id = aItem.Id then
-      Exit;
-  end;
+  if GetOraItemById(aItem.Id) <> nil then
+    Exit;
   SetLength(FOraItems, length(FOraItems) + 1);
   FOraItems[ high(FOraItems)] := aItem;
   if Assigned(FOnChange) then
@@ -324,14 +311,9 @@ begin
 end;
 
 procedure TORDESYProjectList.AddOraScheme(aScheme: TOraScheme);
-var
-  i: integer;
 begin
-  for i := 0 to high(FOraSchemes) do
-  begin
-    if FOraSchemes[i].Id = aScheme.Id then
-      Exit;
-  end;
+  if GetOraSchemeById(aScheme.Id) <> nil then
+    Exit;
   SetLength(FOraSchemes, length(FOraSchemes) + 1);
   FOraSchemes[ high(FOraSchemes)] := aScheme;
   if Assigned(FOnSchemeAdd) then
@@ -365,12 +347,10 @@ destructor TORDESYProject.Destroy;
 var
   i: integer;
 begin
-
   for i := 0 to high(FORDESYModules) do
     FORDESYModules[i].Free;
   SetLength(FORDESYModules, 0);
-
-  inherited Destroy;
+  inherited;
 end;
 
 function TORDESYProjectList.GetFreeBaseId: integer;
@@ -475,14 +455,27 @@ begin
   Result := length(FORDESYModules);
 end;
 
-function TORDESYProject.GetModuleName(const aIndex: integer): string;
+function TORDESYProject.GetModuleNameById(const aId: integer): string;
 var
   i: integer;
 begin
   Result := '';
   for i := 0 to high(FORDESYModules) do
-    if FORDESYModules[i].FId = aIndex then
+    if FORDESYModules[i].FId = aId then
+    begin
       Result := FORDESYModules[i].Name;
+      Exit;
+    end;
+end;
+
+function TORDESYProject.GetModuleNameByIndex(const aIndex: integer): string;
+begin
+  Result := '';
+  if (aIndex >= 0) and (aIndex <= high(FORDESYModules)) then
+    Result := FORDESYModules[aIndex].Name
+  else
+    raise Exception.Create('Incorrect module index. Max value is: ' + IntToStr
+        ( high(FORDESYModules)));
 end;
 
 function TORDESYProject.RemoveModuleById(const aId: integer): boolean;
@@ -539,7 +532,10 @@ function TORDESYProjectList.GetOraBaseByIndex(const aIndex: integer): TOraBase;
 begin
   Result := nil;
   if (aIndex >= 0) and (aIndex <= high(FOraBases)) then
-    Result := FOraBases[aIndex];
+    Result := FOraBases[aIndex]
+  else
+    raise Exception.Create('Incorrect base index. Max value is: ' + IntToStr
+        ( high(FOraBases)));
 end;
 
 function TORDESYProjectList.GetOraBaseCount: integer;
@@ -554,7 +550,10 @@ begin
   Result := '';
   for i := 0 to high(FOraBases) do
     if FOraBases[i].FId = aId then
+    begin
       Result := FOraBases[i].Name;
+      Exit;
+    end;
 end;
 
 function TORDESYProjectList.GetOraBaseNameByIndex(
@@ -562,7 +561,10 @@ function TORDESYProjectList.GetOraBaseNameByIndex(
 begin
   Result := '';
   if (aIndex >= 0) and (aIndex <= high(FOraBases)) then
-    Result := FOraBases[aIndex].Name;
+    Result := FOraBases[aIndex].Name
+  else
+    raise Exception.Create('Incorrect base index. Max value is: ' + IntToStr
+        ( high(FOraBases)));
 end;
 
 function TORDESYModule.GetOraItemById(const aId: integer): TOraItem;
@@ -595,14 +597,17 @@ begin
   Result := length(FOraItems);
 end;
 
-function TORDESYModule.GetOraItemName(const aIndex: integer): string;
+function TORDESYModule.GetOraItemNameById(const aId: integer): string;
 var
   i: integer;
 begin
   Result := '';
   for i := 0 to high(FOraItems) do
-    if FOraItems[i].FId = aIndex then
+    if FOraItems[i].FId = aId then
+    begin
       Result := FOraItems[i].Name;
+      Exit;
+    end;
 end;
 
 function TORDESYProjectList.GetOraSchemeById(const aId: integer): TOraScheme;
@@ -636,14 +641,28 @@ begin
   Result := length(FOraSchemes);
 end;
 
-function TORDESYProjectList.GetOraSchemeLogin(const aIndex: integer): string;
+function TORDESYProjectList.GetOraSchemeLoginById(const aId: integer): string;
 var
   i: integer;
 begin
   Result := '';
   for i := 0 to high(FOraSchemes) do
-    if FOraSchemes[i].FId = aIndex then
+    if FOraSchemes[i].FId = aId then
+    begin
       Result := FOraSchemes[i].Login;
+      Exit;
+    end;
+end;
+
+function TORDESYProjectList.GetOraSchemeLoginByIndex(
+  const aIndex: integer): string;
+begin
+  Result := '';
+  if (aIndex >= 0) and (aIndex <= high(FOraSchemes)) then
+    Result := FOraSchemes[aIndex].Login
+  else
+    raise Exception.Create('Incorrect scheme index. Max value is: ' + IntToStr
+        ( high(FOraSchemes)));
 end;
 
 procedure TORDESYProject.SetCreator(const Value: string);
@@ -912,7 +931,8 @@ begin
   FBody := Value;
   // FHash:= GetSimpleHash(PChar(FBody));
   FHash := MurmurHash2(PAnsiChar(FBody));
-  OnChange(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TOraItem.SetName(const Value: string);
@@ -967,7 +987,7 @@ begin
         Active := true;
         if RecordCount = 0 then
           raise Exception.Create(
-            'The item not deployed yet or deleted manualy. Can''t get status.')
+            'The item not deployed yet or deleted manually. Can''t get status.')
         else
         begin
           First;
@@ -977,6 +997,8 @@ begin
             FValid := false;
         end;
       end;
+      if Assigned(FOnChange) then
+        OnChange(Self);
     finally
       Screen.Cursor := crDefault;
     end;
@@ -1097,7 +1119,9 @@ begin
   FProjects[ high(FProjects)] := aProject;
   FSaved := false;
   if Assigned(FOnProjectAdd) then
-    FOnProjectAdd(Self);
+    OnProjectAdd(Self);
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 procedure TORDESYProjectList.Clear;
@@ -1108,6 +1132,8 @@ begin
     FProjects[i].Free;
   SetLength(FProjects, 0);
   FSaved := false;
+  if Assigned(FOnChange) then
+    OnChange(Self);
 end;
 
 constructor TORDESYProjectList.Create;
@@ -1132,7 +1158,7 @@ begin
     FOraBases[i].Free;
   SetLength(FOraBases, 0);
 
-  inherited Destroy;
+  inherited;
 end;
 
 function TORDESYProjectList.GetFreeProjectId: integer;
@@ -1161,7 +1187,10 @@ begin
   for i := 0 to high(FProjects) do
   begin
     if FProjects[i].Id = aId then
+    begin
       Result := FProjects[i];
+      Exit;
+    end;
   end;
 end;
 
@@ -1170,7 +1199,10 @@ function TORDESYProjectList.GetProjectByIndex(const aIndex: integer)
 begin
   Result := nil;
   if (aIndex >= 0) and (aIndex <= high(FProjects)) then
-    Result := FProjects[aIndex];
+    Result := FProjects[aIndex]
+  else
+    raise Exception.Create('Incorrect project index. Max value is: ' + IntToStr
+        ( high(FProjects)));
 end;
 
 function TORDESYProjectList.GetProjectsCount: integer;
@@ -1214,7 +1246,6 @@ begin
       // Reading header
       FileRead(iHandle, iFileVersion[1], length(ORDESYVERSION) * charSize);
       // Reading version
-      // MessageBox(Application.Handle, PChar(iFileHeader + ' - ' + iFileVersion), PChar('warning'), 0);
       if (iFileHeader <> ORDESYNAME) or (iFileVersion <> ORDESYVERSION) then
         raise Exception.Create
           ('Incorrect project version! Need: ' + ORDESYNAME + ' ' +
@@ -1265,6 +1296,7 @@ begin
           // Getting Desc
           // Adding
           iModule := TORDESYModule.Create(iProject, iId, iName, iDescription);
+          iModule.OnChange:= OnChange;
           iProject.AddModule(iModule);
           // Free
           SetLength(iName, 0);
@@ -1294,8 +1326,10 @@ begin
             SetLength(iBody, strSize);
             FileRead(iHandle, iBody[1], strSize * charSize); // Getting Name
             // Adding
-            iModule.AddOraItem(TOraItem.Create(iModule, iId, BaseId, SchemeId,
-                iName, iBody, iItemType, IItemValid));
+            iItem:= TOraItem.Create(iModule, iId, BaseId, SchemeId,
+                iName, iBody, iItemType, IItemValid);
+            iItem.OnChange:= OnChange;
+            iModule.AddOraItem(iItem);
             // Free
             SetLength(iName, 0);
             SetLength(iBody, 0);
@@ -1316,7 +1350,9 @@ begin
         SetLength(iName, strSize);
         FileRead(iHandle, iName[1], strSize * charSize); // Getting Name
         // Adding
-        AddOraBase(TOraBase.Create(Self, iId, iName));
+        iBase:= TOraBase.Create(Self, iId, iName);
+        iBase.OnChange:= OnChange;
+        AddOraBase(iBase);
         // Free
         SetLength(iName, 0);
       end;
@@ -1336,7 +1372,9 @@ begin
         SetLength(iPass, strSize);
         FileRead(iHandle, iPass[1], strSize * charSize); // Getting Login
         // Adding
-        AddOraScheme(TOraScheme.Create(Self, iId, iLogin, iPass));
+        iScheme:= TOraScheme.Create(Self, iId, iLogin, iPass);
+        iScheme.OnChange:= OnChange;
+        AddOraScheme(iScheme);
         // Free
         SetLength(iLogin, 0);
         SetLength(iPass, 0);
@@ -1731,8 +1769,7 @@ begin
   for i := 0 to high(FOraItems) do
     FOraItems[i].Free;
   SetLength(FOraItems, 0);
-
-  inherited Destroy;
+  inherited;
 end;
 
 procedure TORDESYModule.SetDescription(const Value: WideString);

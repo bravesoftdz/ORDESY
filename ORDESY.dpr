@@ -27,6 +27,5 @@ begin
   Application.MainFormOnTaskbar := True;
   Application.Title := 'OrDeSy';
   Application.CreateForm(TfmMain, fmMain);
-  Application.CreateForm(TfmItemOptions, fmItemOptions);
   Application.Run;
 end.

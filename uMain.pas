@@ -6,6 +6,7 @@ pnl - TPanel
 lbl - TLabel
 gbx - TGroupBox
 cbx - TComboBox
+chbx - TCheckBox
 lbx - TListBox
 spl - TSplitter
 mmo - TMemo
@@ -25,7 +26,7 @@ uses
   uLog,
   {$ENDIF}
   uORDESY, uExplode, uShellFuncs, uOptions, uWrap, uLazyTreeState,
-  uSchemeDialog, uBaseList, uSchemeList, uProjectDialogs, // Dialogs
+  uSchemeDialog, uBaseList, uSchemeList, uProjectDialogs, uItemOptions, // Dialogs
   // Delphi Modules
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, Menus, StdCtrls, ExtCtrls, ComCtrls, ToolWin, ImgList, Buttons;
@@ -96,6 +97,7 @@ type
     procedure OnEditScheme(Sender: TObject); // Edit scheme by ProjectList
     procedure EditScheme(aScheme: TOraScheme); // Edit scheme by SchemeList
     procedure DeleteScheme(Sender: TObject);
+    procedure ItemOptions(Sender: TObject);
     procedure tvMainClick(Sender: TObject);
     procedure miFileClick(Sender: TObject);
     procedure miSavechangesClick(Sender: TObject);
@@ -336,6 +338,12 @@ begin
   PrepareProjects;
   PrepareTreeState;
   PrepareGUI;
+end;
+
+procedure TfmMain.ItemOptions(Sender: TObject);
+begin
+  if Assigned(tvMain.Selected) and Assigned(tvMain.Selected.Data) and (TObject(tvMain.Selected.Data) is TOraItem) and ShowItemOptionsDialog(TOraItem(tvMain.Selected.Data)) then
+    UpdateGUI;
 end;
 
 procedure TfmMain.ViewProjects(aTreeView: TTreeView);
@@ -697,13 +705,13 @@ begin
       imlMain.GetIcon(1, NotValidIcon);
       imlMain.GetBitmap(9, ValidIcon);
       ValidIcon.Canvas.Draw(0, 0, NotValidIcon);
-      imlMain.Add(ValidIcon, nil);
+      imlMain.AddMasked(ValidIcon, ValidIcon.TransparentColor);
       imlMain.GetBitmap(14, ValidIcon);
       ValidIcon.Canvas.Draw(0, 0, NotValidIcon);
-      imlMain.Add(ValidIcon, nil);
+      imlMain.AddMasked(ValidIcon, ValidIcon.TransparentColor);
       imlMain.GetBitmap(15, ValidIcon);
       ValidIcon.Canvas.Draw(0, 0, NotValidIcon);
-      imlMain.Add(ValidIcon, nil);
+      imlMain.AddMasked(ValidIcon, ValidIcon.TransparentColor);
     finally
       NotValidIcon.Free;
       ValidIcon.Free;
@@ -837,7 +845,7 @@ begin
       ItemMenu.Add(MenuItem);
       //
       MenuItem:= TMenuItem.Create(ppmMain);
-      //MenuItem.OnClick:= ItemOptions;
+      MenuItem.OnClick:= ItemOptions;
       MenuItem.Caption:= 'Options';
       MenuItem.Tag:= 26;
       ItemMenu.Add(MenuItem);
@@ -866,7 +874,7 @@ begin
     if not Assigned(AppOptions) then
       AppOptions:= TOptions.Create;
     AppOptions.AppTitle:= Application.Title;
-    AppOptions.UserName:= GetWindowsUser; //Узнаем текущее имя пользователя
+    AppOptions.UserName:= GetWindowsUser; // Retrieve current username
     if not AppOptions.LoadUserOptions() then
       raise Exception.Create('Cant''t load user options!');
   except
@@ -916,8 +924,8 @@ procedure TfmMain.SaveFormSize(const aWidth, aHeight: integer);
 begin
   if Assigned(AppOptions) then
   begin
-    AppOptions.SetOption('GUI', 'FormWidth', inttostr(aWidth)); // leak memory here, idk what the reason
-    AppOptions.SetOption('GUI', 'FormHeight', inttostr(aHeight)); // leak memory here, idk what the reason
+    AppOptions.SetOption('GUI', 'FormWidth', inttostr(aWidth));
+    AppOptions.SetOption('GUI', 'FormHeight', inttostr(aHeight));
   end;
 end;
 
@@ -965,57 +973,52 @@ end;
 procedure TfmMain.tvMainExpanded(Sender: TObject; Node: TTreeNode);
 begin
   TreeStateList.ReadState(tvMain);
-  //ShowMessage(inttostr(TreeStateList.Count));
 end;
 
 procedure TfmMain.tvMainGetImageIndex(Sender: TObject; Node: TTreeNode);
 begin
   try
-    try
-      Node.SelectedIndex:= Node.ImageIndex;
-      if TObject(Node.Data) is TOraItem then
-        case TOraItem(Node.Data).ItemType of
-          OraProcedure:
-            begin
-              if TOraItem(Node.Data).Valid then
-                Node.ImageIndex:= 15
-              else
-                Node.ImageIndex:= 66;
-            end;
-          OraFunction:
-            begin
-              if TOraItem(Node.Data).Valid then
-                Node.ImageIndex:= 14
-              else
-                Node.ImageIndex:= 65;
-            end;
-          OraPackage:
-            begin
-              if TOraItem(Node.Data).Valid then
-                Node.ImageIndex:= 9
-              else
-                Node.ImageIndex:= 64;
-            end;
-        end
-      else if TObject(Node.Data) is TOraScheme then
-        Node.ImageIndex:= 52
-      else if TObject(Node.Data) is TOraBase then
-        Node.ImageIndex:= 50
-      else if TObject(Node.Data) is TORDESYModule then
-        if Node.HasChildren and Node.Expanded then
-          Node.ImageIndex:= 55
-        else
-          Node.ImageIndex:= 54
-      else if TObject(Node.Data) is TORDESYProject then
-        if Node.HasChildren and Node.Expanded then
-          Node.ImageIndex:= 59
-        else
-          Node.ImageIndex:= 58
-      else if (Node.Data = nil) and (Node.Text = '?') then
-        Node.ImageIndex:= 0;
-    finally
-
-    end;
+    Node.SelectedIndex:= Node.ImageIndex;
+    if TObject(Node.Data) is TOraItem then
+      case TOraItem(Node.Data).ItemType of
+        OraProcedure:
+          begin
+            if TOraItem(Node.Data).Valid then
+              Node.ImageIndex:= 15
+            else
+              Node.ImageIndex:= 66; // created at runtime
+          end;
+        OraFunction:
+          begin
+            if TOraItem(Node.Data).Valid then
+              Node.ImageIndex:= 14
+            else
+              Node.ImageIndex:= 65; // created at runtime
+          end;
+        OraPackage:
+          begin
+            if TOraItem(Node.Data).Valid then
+              Node.ImageIndex:= 9
+            else
+              Node.ImageIndex:= 64; // created at runtime
+          end;
+      end
+    else if TObject(Node.Data) is TOraScheme then
+      Node.ImageIndex:= 52
+    else if TObject(Node.Data) is TOraBase then
+      Node.ImageIndex:= 50
+    else if TObject(Node.Data) is TORDESYModule then
+      if Node.HasChildren and Node.Expanded then
+        Node.ImageIndex:= 55
+      else
+        Node.ImageIndex:= 54
+    else if TObject(Node.Data) is TORDESYProject then
+      if Node.HasChildren and Node.Expanded then
+        Node.ImageIndex:= 59
+      else
+        Node.ImageIndex:= 58
+    else if (Node.Data = nil) and (Node.Text = '?') then
+      Node.ImageIndex:= 0;
   except
     on E: Exception do
     begin
@@ -1043,14 +1046,27 @@ var
   iModule: TORDESYModule;
   iItem: TOraItem;
 begin
-  if Assigned(tvMain.Selected) and Assigned(tvMain.Selected.Data) and (TObject(tvMain.Selected.Data) is TORDESYProject) then
-  begin
-    iProject:= TORDESYProject(tvMain.Selected.Data);
-    for iM := 0 to iProject.ModuleCount - 1 do
+  try
+    if Assigned(tvMain.Selected) and Assigned(tvMain.Selected.Data) and (TObject(tvMain.Selected.Data) is TORDESYProject) then
     begin
-      iModule:= iProject.GetModuleByIndex(iM);
-      for iI := 0 to iModule.OraItemCount - 1 do
-        iModule.GetOraItemByIndex(iI).UpdateStatus;
+      iProject:= TORDESYProject(tvMain.Selected.Data);
+      for iM := 0 to iProject.ModuleCount - 1 do
+      begin
+        iModule:= iProject.GetModuleByIndex(iM);
+        for iI := 0 to iModule.OraItemCount - 1 do
+          iModule.GetOraItemByIndex(iI).UpdateStatus;
+      end;
+    end;
+    UpdateGUI;
+  except
+    on E: Exception do
+    begin
+      {$IFDEF Debug}
+      AddToLog(ClassName + ' | UpdateStatus | ' + E.Message);
+      MessageBox(Application.Handle, PChar(ClassName + ' | UpdateStatus | ' + E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ELSE}
+      MessageBox(Application.Handle, PChar(E.Message), PChar(Application.Title + ' - Error'), 48);
+      {$ENDIF}
     end;
   end;
 end;
